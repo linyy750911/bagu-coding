@@ -17,7 +17,8 @@ export class FormatRule implements CodeBaguRule {
       const line = lines[i].trim();
       if (!line) continue;
 
-      if (line.startsWith('//') && commentChar === '#') {
+      const isJsComment = /^\s*\/\/\s/.test(line) || /^\s*\/\/[\u4e00-\u9fa5]/.test(line);
+      if (isJsComment && commentChar === '#') {
         violations.push({
           ruleId: this.id, severity: 'error',
           message: `[${filePath}:${i + 1}] Python 文件不能使用 // 注释，请使用 #`,

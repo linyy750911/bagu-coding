@@ -19,8 +19,6 @@ export class EmptyBaguRule implements CodeBaguRule {
       const line = lines[i].trim();
       const match = line.match(SECTION_START);
 
-      if (match && !line.endsWith('=') && match[1] === match[2]) continue;
-
       if (match) {
         if (currentSection && !hasContent) {
           violations.push({
@@ -48,6 +46,8 @@ export class EmptyBaguRule implements CodeBaguRule {
           currentSection = nextMatch[2];
           sectionStartLine = i;
           hasContent = false;
+        } else if ((line.startsWith('#') || line.startsWith('//')) && VALID_EMPTY.test(line)) {
+          hasContent = true;
         } else if (line.startsWith('#') || line.startsWith('//')) {
           hasContent = true;
         } else if (line.length > 0) {
