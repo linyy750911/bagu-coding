@@ -30,7 +30,17 @@ export function validateConfig(raw: unknown): CodeBaguConfig {
     }
   }
 
+  const knownRules = new Set(requiredRules);
+  for (const key of Object.keys(rules)) {
+    if (!knownRules.has(key)) {
+      throw new Error(`未知的规则: rules.${key}`);
+    }
+  }
+
   const ci = config.ci as Record<string, unknown> | undefined;
+  if (ci?.strict !== undefined && typeof ci.strict !== 'boolean') {
+    throw new Error('ci.strict 必须是布尔值');
+  }
   const ciFormat = ci?.format;
   if (ciFormat !== undefined && ciFormat !== 'text' && ciFormat !== 'json') {
     throw new Error('ci.format 必须是 text 或 json');

@@ -1,0 +1,9 @@
+version: "1.0"
+project: "test"
+languages:
+  - python
+rules:
+  tuopu_header: required
+  bagu_paragraphs: required
+  anti_duality: required
+  empty_bagu: warn
