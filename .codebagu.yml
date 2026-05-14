@@ -1,0 +1,13 @@
+version: "1.0"
+project: "test-project"
+languages:
+  - python
+rules:
+  tuopu_header: required
+  bagu_paragraphs: required
+  anti_duality: required
+  empty_bagu: warn
+  format_consistency: required
+ci:
+  strict: true
+  format: json
