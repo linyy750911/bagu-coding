@@ -50,7 +50,7 @@ export function validateConfig(raw: unknown): CodeBaguConfig {
     version: config.version as string,
     project: config.project as string,
     languages: config.languages as string[],
-    rules: rules as CodeBaguConfig['rules'],
+    rules: rules as unknown as CodeBaguConfig['rules'],
     ci: {
       strict: ci?.strict === true,
       format: (ci?.format as 'text' | 'json') || 'text',
