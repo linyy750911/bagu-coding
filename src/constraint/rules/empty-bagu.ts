@@ -2,7 +2,6 @@ import { CodeBaguRule, RuleContext, RuleViolation } from '../types';
 
 const SECTION_START = /^(#|\/\/)\s*====\s*(\S+)\s*====/;
 const SECTION_END = /^(#|\/\/)\s*====\s*(\S+)\s*====/;
-const VALID_EMPTY = /(N\/A|无需)$/;
 
 export class EmptyBaguRule implements CodeBaguRule {
   id = 'empty_bagu';
@@ -46,11 +45,7 @@ export class EmptyBaguRule implements CodeBaguRule {
           currentSection = nextMatch[2];
           sectionStartLine = i;
           hasContent = false;
-        } else if ((line.startsWith('#') || line.startsWith('//')) && VALID_EMPTY.test(line)) {
-          hasContent = true;
-        } else if (line.startsWith('#') || line.startsWith('//')) {
-          hasContent = true;
-        } else if (line.length > 0) {
+        } else if ((line.startsWith('#') || line.startsWith('//')) || line.length > 0) {
           hasContent = true;
         }
       }
