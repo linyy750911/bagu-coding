@@ -12,6 +12,6 @@ export async function loadConfig(configPath: string): Promise<CodeBaguConfig> {
   return validateConfig(parsed);
 }
 
-export function loadConfigFromCwd(): CodeBaguConfig {
+export async function loadConfigFromCwd(): Promise<CodeBaguConfig> {
   return loadConfig('.codebagu.yml');
 }
