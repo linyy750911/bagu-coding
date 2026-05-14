@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import { parse } from 'yaml';
+import { join } from 'path';
 import { CodeBaguConfig } from './types';
 import { validateConfig } from './schema';
 
@@ -12,6 +13,6 @@ export async function loadConfig(configPath: string): Promise<CodeBaguConfig> {
   return validateConfig(parsed);
 }
 
-export async function loadConfigFromCwd(): Promise<CodeBaguConfig> {
-  return loadConfig('.codebagu.yml');
+export async function loadConfigFromCwd(cwd = process.cwd()): Promise<CodeBaguConfig> {
+  return loadConfig(join(cwd, '.codebagu.yml'));
 }

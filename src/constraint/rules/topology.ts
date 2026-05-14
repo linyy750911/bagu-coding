@@ -20,7 +20,18 @@ export class TopoHeaderRule implements CodeBaguRule {
       return violations;
     }
 
-    const headerContent = source.slice(0, source.indexOf('"""', 3) + 3).toLowerCase();
+    const closeIdx = source.indexOf('"""', 3);
+    if (closeIdx === -1) {
+      violations.push({
+        ruleId: this.id,
+        severity: 'error',
+        message: `[${filePath}] 拓扑图头 docstring 未闭合`,
+        line: 1,
+      });
+      return violations;
+    }
+
+    const headerContent = source.slice(0, closeIdx + 3).toLowerCase();
 
     for (const field of REQUIRED_FIELDS) {
       if (!headerContent.includes(field.toLowerCase())) {

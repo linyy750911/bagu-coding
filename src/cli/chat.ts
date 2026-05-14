@@ -1,4 +1,6 @@
 import * as readline from 'readline';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { CodeBaguConfig } from '../config/types';
 import { DeepSeekAdapter } from '../llm/deepseek';
 import { AgentLoop } from '../agent/loop';
@@ -12,9 +14,10 @@ import { BaguParagraphsRule } from '../constraint/rules/bagu';
 import { DualityRule } from '../constraint/rules/duality';
 import { FormatRule } from '../constraint/rules/format';
 import { EmptyBaguRule } from '../constraint/rules/empty-bagu';
+import { MetricsReporter } from '../agent/metrics';
 
 export async function startChat(config: CodeBaguConfig, options: {
-  model?: string; apiKey?: string; skillPath?: string; workingDir?: string;
+  model?: string; apiKey?: string; skill?: string; workingDir?: string;
 }): Promise<void> {
   const apiKey = options.apiKey || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('请设置 DEEPSEEK_API_KEY 环境变量或通过 --api-key 提供');
@@ -33,7 +36,7 @@ export async function startChat(config: CodeBaguConfig, options: {
   const contextManager = new ContextManager(workingDir);
 
   const agent = new AgentLoop(llm, toolExecutor, promptInjector, contextManager, validator, model);
-  const skillContent = options.skillPath ? (contextManager.loadSkillFile(options.skillPath) ?? undefined) : undefined;
+  const skillContent = options.skill ? (contextManager.loadSkillFile(options.skill) ?? undefined) : undefined;
   agent.setSystemPrompt(skillContent);
 
   console.log(`Code Bagu v1.0.0 | 八股约束: 启用 | 模型: ${model}`);
@@ -45,7 +48,7 @@ export async function startChat(config: CodeBaguConfig, options: {
 
   rl.on('line', async (line: string) => {
     const input = line.trim();
-    if (input === '/quit' || input === '/exit') { console.log('再见!'); rl.close(); process.exit(0); }
+    if (input === '/quit' || input === '/exit') { console.log('再见!'); rl.close(); return; }
     if (input === '/clear') { agent.setSystemPrompt(skillContent); console.log('对话已清除\n'); rl.prompt(); return; }
     if (!input) { rl.prompt(); return; }
 
@@ -57,5 +60,18 @@ export async function startChat(config: CodeBaguConfig, options: {
       console.log(`\n❌ 错误: ${message}\n`);
     }
     rl.prompt();
+  });
+
+  rl.on('close', () => {
+    const metrics = agent.getMetrics();
+    if (metrics.totalRounds > 0) {
+      const reportDir = join(workingDir, '.codebagu');
+      if (!existsSync(reportDir)) mkdirSync(reportDir, { recursive: true });
+      const reportPath = join(reportDir, 'session-report.json');
+      console.log(MetricsReporter.textSummary(metrics));
+      MetricsReporter.generateReport(metrics, reportPath);
+      console.log(`\n详细报告已保存: ${reportPath}`);
+    }
+    process.exit(0);
   });
 }

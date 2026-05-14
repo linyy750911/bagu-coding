@@ -25,17 +25,18 @@ export class BaguParagraphsRule implements CodeBaguRule {
         message: `[${filePath}] 缺少破题（# 破题：做什么；不做什么。）`, line: 1,
       });
     } else {
+      const potiLine = this.lineOf(source, potiMatch.index ?? 0);
       const potiContent = potiMatch[1].trim();
       const parts = potiContent.split(/[；;]/);
       if (parts.length < 2) {
         violations.push({
           ruleId: this.id, severity: 'error',
-          message: `[${filePath}] 破题必须用分号分隔两句（做什么；不做什么）`, line: 1,
+          message: `[${filePath}] 破题必须用分号分隔两句（做什么；不做什么）`, line: potiLine,
         });
       } else if (!parts[1].trim().startsWith('不做')) {
         violations.push({
           ruleId: this.id, severity: 'error',
-          message: `[${filePath}] 破题第二句必须以"不做"开头，当前: "${parts[1].trim()}"`, line: 1,
+          message: `[${filePath}] 破题第二句必须以"不做"开头，当前: "${parts[1].trim()}"`, line: potiLine,
         });
       }
     }
@@ -76,34 +77,38 @@ export class BaguParagraphsRule implements CodeBaguRule {
       }
     }
 
-    const houGuSection = this.extractSection(source, '后股');
-    if (houGuSection) {
-      if (!/正路径/.test(houGuSection) && !/✓/.test(houGuSection)) {
+    const houGu = this.extractSection(source, '后股');
+    if (houGu.content) {
+      if (!/正路径/.test(houGu.content) && !/✓/.test(houGu.content)) {
         violations.push({
           ruleId: this.id, severity: 'error',
           message: `[${filePath}] 后股缺少正路径标记（✓ 正路径）`,
+          line: houGu.startLine,
         });
       }
-      if (!/降级路径/.test(houGuSection) && !/✗/.test(houGuSection)) {
+      if (!/降级路径/.test(houGu.content) && !/✗/.test(houGu.content)) {
         violations.push({
           ruleId: this.id, severity: 'error',
           message: `[${filePath}] 后股缺少降级路径标记（✗ 降级路径）`,
+          line: houGu.startLine,
         });
       }
     }
 
-    const shuGuSection = this.extractSection(source, '束股');
-    if (shuGuSection) {
-      if (!/给出/.test(shuGuSection)) {
+    const shuGu = this.extractSection(source, '束股');
+    if (shuGu.content) {
+      if (!/给出/.test(shuGu.content)) {
         violations.push({
           ruleId: this.id, severity: 'error',
           message: `[${filePath}] 束股缺少"给出"（返回值）`,
+          line: shuGu.startLine,
         });
       }
-      if (!/留下/.test(shuGuSection)) {
+      if (!/留下/.test(shuGu.content)) {
         violations.push({
           ruleId: this.id, severity: 'error',
           message: `[${filePath}] 束股缺少"留下"（副作用）`,
+          line: shuGu.startLine,
         });
       }
     }
@@ -111,19 +116,26 @@ export class BaguParagraphsRule implements CodeBaguRule {
     return violations;
   }
 
-  private extractSection(source: string, sectionName: string): string | null {
+  private lineOf(source: string, index: number): number {
+    return source.slice(0, index).split('\n').length;
+  }
+
+  private extractSection(source: string, sectionName: string): { content: string | null; startLine: number } {
     const startRegex = new RegExp(`^[ \\t]*#\\s*====\\s*${sectionName}\\s*====`);
     const endRegex = /^[ \t]*#\s*====\s*\S+\s*====/;
     const lines = source.split('\n');
     let inSection = false;
     const sectionLines: string[] = [];
+    let startLine = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      if (startRegex.test(lines[i])) { inSection = true; continue; }
+      if (startRegex.test(lines[i])) { inSection = true; startLine = i + 1; continue; }
       if (inSection && endRegex.test(lines[i])) break;
       if (inSection) sectionLines.push(lines[i]);
     }
 
-    return sectionLines.length > 0 ? sectionLines.join('\n') : null;
+    return sectionLines.length > 0
+      ? { content: sectionLines.join('\n'), startLine }
+      : { content: null, startLine };
   }
 }

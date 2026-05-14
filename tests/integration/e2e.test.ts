@@ -10,6 +10,8 @@ function runCli(args: string): string {
   try {
     return execSync(`tsx ${CLI_ENTRY} ${args}`, { encoding: 'utf-8', cwd: TEST_DIR });
   } catch (err: unknown) {
+    const stdout = (err as { stdout?: Buffer })?.stdout;
+    if (stdout) return stdout.toString();
     const stderr = (err as { stderr?: Buffer })?.stderr;
     return stderr?.toString() || String(err);
   }

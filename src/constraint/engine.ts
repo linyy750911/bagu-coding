@@ -24,13 +24,15 @@ export class ConstraintEngine {
 
       const violations = rule.check(context);
       for (const v of violations) {
-        v.severity = toSeverity(severity);
-        allViolations.push(v);
+        allViolations.push({ ...v, severity: toSeverity(severity) });
       }
     }
 
     const errors = allViolations.filter(v => v.severity === 'error');
     const passed = errors.length === 0;
+
+    // 监控：每个规则的命中情况由调用方（AgentLoop）通过 violations 数组统计
+    // Engine 本身只负责收集，不做聚合写入，避免循环依赖
 
     return {
       passed,

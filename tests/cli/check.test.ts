@@ -12,10 +12,15 @@ describe('codebagu check', () => {
   });
 
   it('should fail for noncompliant file', () => {
-    const output = execSync(
-      'tsx src/index.ts check tests/fixtures/noncompliant.py --format json --strict',
-      { encoding: 'utf-8', cwd: process.cwd() }
-    );
+    let output: string;
+    try {
+      output = execSync(
+        'tsx src/index.ts check tests/fixtures/noncompliant.py --format json --strict',
+        { encoding: 'utf-8', cwd: process.cwd() }
+      );
+    } catch (err: unknown) {
+      output = (err as { stdout?: string }).stdout || '';
+    }
     const result = JSON.parse(output);
     expect(result.passed).toBe(false);
     expect(result.violations.length).toBeGreaterThan(0);

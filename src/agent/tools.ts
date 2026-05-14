@@ -131,11 +131,17 @@ export class AgentToolExecutor {
       const fullPath = join(this.workingDir, searchPath);
       const files = this.collectFiles(fullPath, '.py');
       const results: string[] = [];
+      let regex: RegExp;
+      try {
+        regex = new RegExp(pattern, 'g');
+      } catch (err) {
+        return { success: false, output: `无效的正则表达式: ${err instanceof Error ? err.message : String(err)}` };
+      }
       for (const file of files) {
         const content = readFileSync(file, 'utf-8');
-        const regex = new RegExp(pattern, 'g');
         const lines = content.split('\n');
         for (let i = 0; i < lines.length; i++) {
+          regex.lastIndex = 0;
           if (regex.test(lines[i])) results.push(`${file}:${i + 1}: ${lines[i].trim()}`);
         }
       }

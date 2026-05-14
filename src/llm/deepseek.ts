@@ -25,6 +25,7 @@ export class DeepSeekAdapter implements LLMAdapter {
         content: m.content,
         ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}),
         ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {}),
+        ...(m.reasoning_content ? { reasoning_content: m.reasoning_content } : {}),
       })),
     };
 
@@ -32,20 +33,33 @@ export class DeepSeekAdapter implements LLMAdapter {
     if (request.max_tokens) body.max_tokens = request.max_tokens;
     if (request.temperature !== undefined) body.temperature = request.temperature;
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`DeepSeek API error ${response.status}: ${text}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`DeepSeek API error ${response.status}: ${text}`);
+      }
+
+      return response.json() as Promise<LLMResponse>;
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('DeepSeek API 请求超时（60秒）');
+      }
+      throw err;
     }
-
-    return response.json() as Promise<LLMResponse>;
   }
 }

@@ -1,7 +1,6 @@
 import { CodeBaguRule, RuleContext, RuleViolation } from '../types';
 
 const SECTION_START = /^(#|\/\/)\s*====\s*(\S+)\s*====/;
-const SECTION_END = /^(#|\/\/)\s*====\s*(\S+)\s*====/;
 
 export class EmptyBaguRule implements CodeBaguRule {
   id = 'empty_bagu';
@@ -33,19 +32,7 @@ export class EmptyBaguRule implements CodeBaguRule {
       }
 
       if (currentSection) {
-        const nextMatch = line.match(SECTION_END);
-        if (nextMatch && nextMatch[2] !== currentSection) {
-          if (!hasContent) {
-            violations.push({
-              ruleId: this.id, severity: 'warning',
-              message: `[${filePath}:${sectionStartLine + 1}] 股 "${currentSection}" 标记后没有内容，需声明 N/A 或 无需`,
-              line: sectionStartLine + 1,
-            });
-          }
-          currentSection = nextMatch[2];
-          sectionStartLine = i;
-          hasContent = false;
-        } else if ((line.startsWith('#') || line.startsWith('//')) || line.length > 0) {
+        if ((line.startsWith('#') || line.startsWith('//')) || line.length > 0) {
           hasContent = true;
         }
       }

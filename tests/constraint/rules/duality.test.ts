@@ -31,7 +31,19 @@ print("leak")
     expect(violations.some(v => v.message.includes('🔒'))).toBe(true);
   });
 
-  it('should fail when positive/negative path mismatch', () => {
+  it('should pass when negative paths outnumber positive paths', () => {
+    const code = `
+# ✓ path1
+# ✗ path2
+# ✗ path3
+# ✗ path4
+print("ok")
+`;
+    const violations = rule.check(ctx(code));
+    expect(violations.filter(v => v.severity === 'error')).toHaveLength(0);
+  });
+
+  it('should fail when positive paths outnumber negative paths', () => {
     const code = `
 # ✓ path1
 # ✓ path2
@@ -40,6 +52,26 @@ print("imbalance")
 `;
     const violations = rule.check(ctx(code));
     expect(violations.some(v => v.message.includes('✓'))).toBe(true);
+  });
+
+  it('should fail when missing positive path', () => {
+    const code = `
+# ✗ path1
+# ✗ path2
+print("missing positive")
+`;
+    const violations = rule.check(ctx(code));
+    expect(violations.some(v => v.message.includes('✓'))).toBe(true);
+  });
+
+  it('should fail when missing negative path', () => {
+    const code = `
+# ✓ path1
+# ✓ path2
+print("missing negative")
+`;
+    const violations = rule.check(ctx(code));
+    expect(violations.some(v => v.message.includes('✗'))).toBe(true);
   });
 
   it('should fail when increment/decrement mismatch', () => {

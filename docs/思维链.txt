@@ -1,0 +1,2259 @@
+请写一个 Python 模块 health_checker.py，实现以下功能：
+1. 每 30 秒检查一组 URL 的健康状态（HTTP HEAD 请求，5 秒超时）
+2. 结果缓存 60 秒，避免频繁请求
+3. 网络不可用时，返回上次缓存结果（STALE 模式）
+4. 连续 3 次失败标记该 URL 为 "DOWN"，触发告警回调
+5. 支持动态增删 URL，线程安全
+6. 停止检查时释放所有线程和连接池
+【必须处理的异常场景，不要遗漏】：
+- 请求超时（5秒无响应）：不崩溃，返回 STALE 缓存
+- 网络断开：返回 STALE 缓存
+- 连续 3 次检查失败：标记该 URL 为 "DOWN"，触发回调函数
+- 动态增删 URL 时的竞态条件：线程安全，不能 crash
+- 停止检查（调用 stop 方法）：所有线程、定时器、连接池必须释放干净
+- 缓存读写：多线程环境下缓存操作必须加锁保护
+【验收标准】：
+- 代码必须可直接运行（python3 health_checker.py 不报错）
+- 包含 __main__ 演示块，能直观展示功能
+- 使用 requests 库（允许 import requests）
+请直接生成完整可运行的代码，不要先问问题，不要分段输出，一次性写完保存到文件。 
+Thinking: The user wants me to create a Python module health_checker.py with specific requirements. Let me analyze the requirements:
+1. Check URL health every 30 seconds (HTTP HEAD, 5s timeout)
+2. Cache results for 60 seconds
+3. Return stale cache when network unavailable
+4. 3 consecutive failures → mark as DOWN, trigger alert callback
+5. Dynamic add/remove URLs, thread-safe
+6. Clean shutdown releasing all threads and connection pools
+Edge cases:
+- Request timeout (5s): don't crash, return STALE cache
+- Network disconnect: return STALE cache
+- 3 consecutive failures: mark DOWN, trigger callback
+- Race conditions on add/remove: thread-safe
+- Stop: all threads, timers, connection pools released
+- Cache read/write: lock-protected in multi-threaded environment
+Let me write a complete, production-quality implementation.
+I'll design:
+- URLCheckResult - dataclass for per-URL state
+- HealthChecker - main class
+  - add_url(url) / remove_url(url) - thread-safe
+  - start() / stop() - lifecycle
+  - check_url(url) - single check
+  - run_check_cycle() - check all URLs periodically
+  - Uses ThreadPoolExecutor for parallel checks
+  - Uses requests.Session with connection pooling
+  - Cache with 60s TTL
+  - STALE mode when network unavailable
+  - Alert callback on DOWN detection
+  - Thread-safe with locks
+Let me write this out completely.
+Key design decisions:
+- Use threading.Thread for the periodic checker loop
+- Use concurrent.futures.ThreadPoolExecutor for parallel HTTP checks
+- Use threading.Lock for cache and URL list protection
+- Use requests.Session with connection pooling (properly closed on stop)
+- Each URL tracks: last check time, last result, consecutive failures, status
+- Cache TTL: 60 seconds
+Let me think about the structure more carefully:
+import threading
+import time
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Dict, Callable, Optional, Set
+from enum import Enum
+import signal
+Result statuses: UP, DOWN, STALE, UNCHECKED
+For the cache:
+- On successful check: store result with timestamp
+- On next check within 60s: return cached result
+- On check after 60s: re-check
+- On timeout/network error: return stale cache if available, otherwise UNKNOWN
+Alert callback: called when a URL transitions to DOWN (3 consecutive failures).
+Let me write this now.
+Actually, let me think about the STALE mode more carefully:
+- "网络不可用时，返回上次缓存结果（STALE 模式）" - when network is unavailable, return the last cached result
+- "请求超时（5秒无响应）：不崩溃，返回 STALE 缓存" - on timeout, return stale cache
+- "网络断开：返回 STALE 缓存" - on network disconnect, return stale cache
+So the logic is:
+1. Try to check the URL
+2. If successful, update cache with current timestamp
+3. If fails (timeout, network error), check if we have a previous cached result → return it as STALE
+4. If no previous cache either → mark as UNKNOWN/DOWN
+For consecutive failures:
+- Increment failure counter on each failed check
+- At 3 consecutive failures, mark as DOWN and trigger callback
+- On successful check, reset counter
+Let me also think about the "DOWN" callback trigger: should it trigger only once when transitioning to DOWN? Or every time? I'll make it trigger on transition (when consecutive_failures reaches 3), not repeatedly.
+Here's my plan:
+@dataclass
+class URLCheckResult:
+    url: str
+    status: str  # UP, DOWN, STALE, UNCHECKED
+    status_code: Optional[int]
+    response_time: Optional[float]
+    error: Optional[str]
+    timestamp: float
+    consecutive_failures: int
+class HealthChecker:
+    def __init__(self, check_interval=30, cache_ttl=60, timeout=5, alert_callback=None):
+        self._check_interval = check_interval
+        self._cache_ttl = cache_ttl
+        self._timeout = timeout
+        self._alert_callback = alert_callback
+        
+        self._urls: Dict[str, URLCheckResult] = {}
+        self._lock = threading.RLock()
+        self._running = False
+        self._check_thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._session: Optional[requests.Session] = None
+        
+    def add_url(self, url: str):
+        with self._lock:
+            if url not in self._urls:
+                self._urls[url] = URLCheckResult(
+                    url=url,
+                    status="UNCHECKED",
+                    status_code=None,
+                    response_time=None,
+                    error=None,
+                    timestamp=time.time(),
+                    consecutive_failures=0
+                )
+    
+    def remove_url(self, url: str):
+        with self._lock:
+            self._urls.pop(url, None)
+    
+    def get_status(self, url: str) -> Optional[URLCheckResult]:
+        with self._lock:
+            return self._urls.get(url)
+    
+    def get_all_statuses(self) -> Dict[str, URLCheckResult]:
+        with self._lock:
+            return dict(self._urls)
+    
+    def start(self):
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._session = requests.Session()
+            self._executor = ThreadPoolExecutor(max_workers=5)
+            self._check_thread = threading.Thread(target=self._check_loop, daemon=True)
+            self._check_thread.start()
+    
+    def stop(self):
+        with self._lock:
+            self._running = False
+        if self._check_thread and self._check_thread.is_alive():
+            self._check_thread.join(timeout=10)
+        if self._executor:
+            self._executor.shutdown(wait=True)
+        if self._session:
+            self._session.close()
+        with self._lock:
+            self._check_thread = None
+            self._executor = None
+            self._session = None
+    
+    def _check_loop(self):
+        while True:
+            with self._lock:
+                if not self._running:
+                    break
+                urls = list(self._urls.keys())
+            
+            if urls:
+                self._check_all_urls(urls)
+            
+            time.sleep(self._check_interval)
+    
+    def _check_all_urls(self, urls):
+        futures = {}
+        with self._lock:
+            session = self._session
+        
+        for url in urls:
+            future = self._executor.submit(self._check_single_url, url)
+            futures[future] = url
+        
+        for future in as_completed(futures):
+            try:
+                url, result = future.result()
+                with self._lock:
+                    if url in self._urls:
+                        self._urls[url] = result
+            except Exception:
+                pass
+    
+    def _check_single_url(self, url) -> tuple:
+        start_time = time.time()
+        try:
+            response = requests.head(url, timeout=self._timeout, allow_redirects=True)
+            elapsed = time.time() - start_time
+            result = URLCheckResult(
+                url=url,
+                status="UP" if response.ok else "DOWN",
+                status_code=response.status_code,
+                response_time=elapsed,
+                error=None,
+                timestamp=time.time(),
+                consecutive_failures=0
+            )
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            # Need to check if we have cached result
+            with self._lock:
+                cached = self._urls.get(url)
+            
+            if cached and cached.timestamp > 0:
+                # Return STALE
+                result = URLCheckResult(
+                    url=url,
+                    status="STALE",
+                    status_code=cached.status_code,
+                    response_time=cached.response_time,
+                    error=str(e),
+                    timestamp=cached.timestamp,  # Keep original timestamp
+                    consecutive_failures=cached.consecutive_failures + 1
+                )
+            else:
+                result = URLCheckResult(
+                    url=url,
+                    status="DOWN",
+                    status_code=None,
+                    response_time=time.time() - start_time,
+                    error=str(e),
+                    timestamp=time.time(),
+                    consecutive_failures=1
+                )
+        
+        # Check for DOWN transition
+        if result.status == "DOWN" or result.consecutive_failures >= 3:
+            # Check if this is a new DOWN
+            with self._lock:
+                old = self._urls.get(url)
+                was_already_down = old and old.status == "DOWN"
+            
+            if result.consecutive_failures >= 3 and not was_already_down:
+                result.status = "DOWN"
+                if self._alert_callback:
+                    self._alert_callback(result)
+        
+        return url, result
+Hmm, wait. Let me re-read the requirements more carefully.
+"结果缓存 60 秒，避免频繁请求" - Cache results for 60 seconds. So if I check a URL and it's UP, and 30 seconds later the next cycle runs, I should return the cached result instead of re-checking. Only re-check after 60 seconds.
+"网络不可用时，返回上次缓存结果（STALE 模式）" - When network is unavailable, return last cached result.
+So the cache logic is:
+1. On each check cycle, for each URL:
+   - If last successful check was within cache_ttl (60s), skip checking (use cache)
+   - Otherwise, try to check
+   - If check succeeds, update cache
+   - If check fails (timeout/network), use stale cache if available
+"连续 3 次失败标记该 URL 为 DOWN" - The "失败" here means: 3 consecutive CHECK ATTEMPTS fail, not 3 consecutive "cached" results. So we count actual HTTP check failures, not cache hits.
+Wait, but if we cache for 60 seconds and check every 30 seconds, then every other check would use cache. So consecutive failures would only happen every 60 seconds... That seems intentional but let me implement it correctly.
+Actually, let me re-think. The requirement says:
+- "每 30 秒检查一组 URL" - check every 30 seconds
+- "结果缓存 60 秒，避免频繁请求" - cache results for 60 seconds
+So the actual HTTP request happens at most every 60 seconds, but the "check cycle" runs every 30 seconds. In between actual checks, cached results are returned.
+But for consecutive failures, it should count actual HTTP request failures, not cache-serving returns. So a failure count only increments on actual HTTP check attempts that fail.
+Let me also think about what "STALE" means vs "DOWN":
+- STALE: The cached result is being used because the current check failed. The URL might still be UP, we just can't confirm.
+- DOWN: 3 consecutive actual HTTP check failures → URL is confirmed down.
+Actually, I think the flow should be:
+1. Try HTTP check
+2. If success → update cache, reset failures, status = UP
+3. If failure (timeout/network):
+   a. If cached result exists → return it as STALE, increment failure count
+   b. If no cache → mark as UNKNOWN/DOWN, increment failure count
+4. If failure count reaches 3 → mark as DOWN, trigger alert
+Let me also think about whether cached results should be returned between check cycles (within the 60s window). When someone calls get_status(url), do they get the latest result including cache? Yes, they should.
+OK, let me now think about the overall design more carefully and write the code.
+I think I should separate the check logic from the cache logic:
+- _check_single_url(url) - always does the HTTP request
+- _check_url_with_cache(url) - checks cache first, then does HTTP request if needed
+In the periodic loop, we call _check_url_with_cache for each URL.
+Let me write the code now. I want it to be clean and fairly concise.
+Here's my refined approach:
+import threading
+import time
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Dict, Callable, Optional, List, Tuple
+from datetime import datetime
+@dataclass
+class URLCheckResult:
+    url: str
+    status: str  # "UP", "DOWN", "STALE", "UNCHECKED"
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    error: Optional[str] = None
+    timestamp: float = field(default_factory=time.time)
+    consecutive_failures: int = 0
+class HealthChecker:
+    def __init__(
+        self,
+        check_interval: float = 30.0,
+        cache_ttl: float = 60.0,
+        timeout: float = 5.0,
+        max_workers: int = 10,
+        alert_callback: Optional[Callable[[URLCheckResult], None]] = None,
+    ):
+        self._check_interval = check_interval
+        self._cache_ttl = cache_ttl
+        self._timeout = timeout
+        self._max_workers = max_workers
+        self._alert_callback = alert_callback
+        
+        self._results: Dict[str, URLCheckResult] = {}
+        self._urls: set = set()
+        self._lock = threading.RLock()
+        self._running = False
+        self._check_thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._session: Optional[requests.Session] = None
+        self._down_notified: set = set()  # URLs already notified as DOWN
+    
+    def add_url(self, url: str) -> None:
+        with self._lock:
+            if url not in self._urls:
+                self._urls.add(url)
+                self._results[url] = URLCheckResult(url=url, status="UNCHECKED")
+    
+    def remove_url(self, url: str) -> None:
+        with self._lock:
+            self._urls.discard(url)
+            self._results.pop(url, None)
+            self._down_notified.discard(url)
+    
+    def get_status(self, url: str) -> Optional[URLCheckResult]:
+        with self._lock:
+            return self._results.get(url)
+    
+    def get_all_statuses(self) -> Dict[str, URLCheckResult]:
+        with self._lock:
+            return {url: self._results[url] for url in self._urls if url in self._results}
+    
+    def start(self) -> None:
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._session = requests.Session()
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=self._max_workers,
+                pool_maxsize=self._max_workers,
+                max_retries=0,
+            )
+            self._session.mount("https://", adapter)
+            self._session.mount("http://", adapter)
+            self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
+            self._check_thread = threading.Thread(target=self._check_loop, daemon=True, name="HealthChecker")
+            self._check_thread.start()
+    
+    def stop(self) -> None:
+        with self._lock:
+            self._running = False
+        
+        if self._check_thread is not None and self._check_thread.is_alive():
+            self._check_thread.join(timeout=self._check_interval + 5)
+        
+        if self._executor is not None:
+            self._executor.shutdown(wait=True, cancel_futures=True)
+        
+        if self._session is not None:
+            self._session.close()
+        
+        with self._lock:
+            self._executor = None
+            self._session = None
+    
+    def _check_loop(self) -> None:
+        while True:
+            with self._lock:
+                if not self._running:
+                    break
+                urls = list(self._urls)
+            
+            if urls:
+                self._check_all_urls(urls)
+            
+            # Sleep in small increments to respond to stop quickly
+            deadline = time.time() + self._check_interval
+            while time.time() < deadline:
+                with self._lock:
+                    if not self._running:
+                        return
+                time.sleep(min(1.0, deadline - time.time()))
+    
+    def _check_all_urls(self, urls: List[str]) -> None:
+        # Determine which URLs actually need checking (cache expired)
+        to_check = []
+        for url in urls:
+            with self._lock:
+                result = self._results.get(url)
+            if result is None:
+                to_check.append(url)
+            elif time.time() - result.timestamp >= self._cache_ttl:
+                to_check.append(url)
+        
+        if not to_check:
+            return
+        
+        futures = {}
+        for url in to_check:
+            future = self._executor.submit(self._check_single_url, url)
+            futures[future] = url
+        
+        for future in as_completed(futures):
+            try:
+                url, result = future.result()
+                self._apply_result(url, result)
+            except Exception:
+                pass
+    
+    def _check_single_url(self, url: str) -> Tuple[str, URLCheckResult]:
+        start = time.time()
+        try:
+            response = self._session.head(
+                url,
+                timeout=self._timeout,
+                allow_redirects=True,
+            )
+            elapsed = time.time() - start
+            ok = 200 <= response.status_code < 400 or response.status_code in (
+                401, 403  # Auth errors still mean the server is UP
+            )
+            return url, URLCheckResult(
+                url=url,
+                status="UP",
+                status_code=response.status_code,
+                response_time=elapsed,
+                error=None,
+                timestamp=time.time(),
+                consecutive_failures=0,
+            )
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            # Check for stale cache
+            with self._lock:
+                cached = self._results.get(url)
+            
+            if cached is not None and cached.status != "UNCHECKED":
+                return url, URLCheckResult(
+                    url=url,
+                    status="STALE",
+                    status_code=cached.status_code,
+                    response_time=cached.response_time,
+                    error=str(e),
+                    timestamp=cached.timestamp,
+                    consecutive_failures=cached.consecutive_failures + 1,
+                )
+            else:
+                return url, URLCheckResult(
+                    url=url,
+                    status="DOWN",
+                    status_code=None,
+                    response_time=None,
+                    error=str(e),
+                    timestamp=time.time(),
+                    consecutive_failures=1,
+                )
+        except requests.exceptions.RequestException as e:
+            # Other request errors
+            with self._lock:
+                cached = self._results.get(url)
+            
+            if cached is not None and cached.status != "UNCHECKED":
+                return url, URLCheckResult(
+                    url=url,
+                    status="STALE",
+                    status_code=cached.status_code,
+                    response_time=cached.response_time,
+                    error=str(e),
+                    timestamp=cached.timestamp,
+                    consecutive_failures=cached.consecutive_failures + 1,
+                )
+            else:
+                return url, URLCheckResult(
+                    url=url,
+                    status="DOWN",
+                    status_code=None,
+                    response_time=None,
+                    error=str(e),
+                    timestamp=time.time(),
+                    consecutive_failures=1,
+                )
+    
+    def _apply_result(self, url: str, result: URLCheckResult) -> None:
+        with self._lock:
+            if url not in self._urls:
+                return  # URL was removed during check
+            
+            old_result = self._results.get(url)
+            was_notified = url in self._down_notified
+            
+            if result.consecutive_failures >= 3 and result.status == "STALE":
+                result.status = "DOWN"
+            
+            self._results[url] = result
+            
+            # Alert on DOWN transition
+            if result.status == "DOWN" and result.consecutive_failures >= 3:
+                if not was_notified:
+                    self._down_notified.add(url)
+                    if self._alert_callback:
+                        # Call alert outside lock to avoid deadlock
+                        cb = self._alert_callback
+                        # Release lock, call back
+            elif result.status == "UP":
+                self._down_notified.discard(url)
+        
+        # Call alert callback outside lock
+        if result.status == "DOWN" and result.consecutive_failures >= 3:
+            was_down = False
+            with self._lock:
+                was_down = url in self._down_notified
+            # Actually we already set it above... let me refactor this
+        # Hmm the logic needs to be cleaner. Let me think again.
+Actually, let me simplify the alert logic. The alert callback should be called when:
+- consecutive_failures reaches 3
+- AND the URL was not already marked as DOWN
+I'll track this with _down_notified set, and call the callback outside the lock.
+Let me also reconsider the overall flow. I think there's a subtle issue: consecutive_failures should only count actual HTTP check failures, not cache reads. Since we skip checking URLs whose cache hasn't expired, we shouldn't increment failures on skipped URLs.
+But wait - what if a URL is DOWN and its cache expires? We try to check, it fails again, that's failure #2. 60 seconds later, another try, failure #3 → DOWN triggered.
+What if network is down? All URLs fail. Each one would count as a failure. After 3 cache-ttl cycles (180 seconds), all URLs would be marked DOWN. That seems reasonable.
+But I also need to consider: the requirement says "网络不可用时，返回上次缓存结果（STALE 模式）". So even if network is down, we return STALE for URLs that have cached results. The consecutive failures still increment though.
+OK actually, one more consideration. In the requirement: "连续 3 次失败标记该 URL 为 DOWN". Does "失败" mean HTTP check failure? Or does it mean the URL status is not UP? I think it means HTTP check failure. But when we return STALE, the URL isn't necessarily DOWN - we just can't reach it due to network issues. The consecutive_failures tracks potential issues.
+Let me finalize the design and write clean code.
+Actually, I want to make this design even cleaner. Let me think about what happens step by step:
+1. Every 30 seconds, the check loop runs
+2. For each URL, if cache is fresh (< 60s old), skip
+3. For expired cache URLs, do HTTP HEAD
+4. On success: update cache, status=UP, failures=0
+5. On timeout/connection error: 
+   a. If cached result exists → status=STALE, failures+=1
+   b. If no cache → status=DOWN, failures=1
+6. If failures >= 3 and status transitions to DOWN → trigger alert
+7. If a URL recovers (UP) → clear DOWN notification
+Let me write the final code now. I'll be mindful of:
+- Thread safety (RLock for all mutable state)
+- Clean shutdown (stop all threads, close session)
+- Proper exception handling
+- Clear main demo
+One thing about cancel_futures=True in ThreadPoolExecutor.shutdown - this was added in Python 3.9. Let me make it compatible.
+Actually, on macOS with Python 3.9+, cancel_futures=True should work. But to be safe, I'll use a try-except or just set it.
+For the demo in __main__, I'll:
+1. Create a HealthChecker with a callback
+2. Add some URLs (including a fake one that will fail)
+3. Start checking
+4. Let it run a bit
+5. Show status
+6. Stop cleanly
+Let me also think about making the demo more interactive/visible. I'll use some well-known URLs that should be UP (like httpbin.org, google.com) and one that's known to be down (like a non-existent domain).
+OK, let me write this now. I'll go with a clean, well-structured implementation.
+Wait, actually I need to reconsider the cache TTL logic more carefully. The requirement says:
+"每 30 秒检查一组 URL" and "结果缓存 60 秒"
+So the check interval is 30s. Every 30s we run through the URL list. But individual URLs are only actually checked if their cache is older than 60s. So effectively, each URL is checked at most every 60s, but the "cycle" runs every 30s.
+This also means: if URL A was checked at t=0, then at t=30 we skip it (cache still valid), at t=60 we check it.
+For consecutive failures: each failure happens when we actually try to check and it fails. So at most one failure per 60s per URL.
+3 consecutive failures = 180 seconds (3 minutes) of being unreachable → marked DOWN.
+That makes sense for a health checker.
+Alright, let me also think about what requests.head with redirects enabled does - it follows redirects with HEAD requests and returns the final response. Good.
+Let me also handle the case where requests.head might raise other exceptions besides Timeout and ConnectionError (e.g., TooManyRedirects, InvalidURL, etc.). These should also be handled gracefully.
+One more thing: in the _check_single_url method, I'm accessing self._session directly. Since _session is only set in start() and cleared in stop(), and we only call _check_single_url from _check_loop which only runs between start and stop, this should be safe. But I should add a guard.
+Actually, looking at my code, I submit _check_single_url to the executor with self._session.head(...). If stop() is called while checks are running, the executor shuts down, but the in-progress checks might still be running. The session.close() would close the connection pool, but in-flight requests should complete or raise an error. I should handle this gracefully.
+Let me add a try-except around the entire check to catch any exceptions from session closure.
+I think I have a solid design now. Let me write the complete code.
+Let me also think about the STALE vs DOWN distinction more carefully.
+When a check fails:
+- If we have a previous result (UP, DOWN, or STALE): new status = STALE, failures incremented
+- If no previous result: new status = DOWN, failures = 1
+When failures reach 3 and status is STALE: transition to DOWN, trigger alert.
+This means:
+- Fresh URL, first check fails → DOWN (no cache), failures=1
+- Second check fails → STALE (using DOWN cache), failures=2
+- Third check fails → still STALE, failures=3 → transition to DOWN
+Hmm, this is a bit weird. The URL goes DOWN → STALE → DOWN. Let me think about this differently.
+Maybe the logic should be:
+- If check fails AND we have a cached UP result → STALE
+- If check fails AND no cache or cached DOWN → continue as DOWN (or stay DOWN)
+Actually, let me simplify. The requirement says:
+1. Check fails → return STALE cache if available
+2. 3 consecutive failures → DOWN
+So:
+- Check fails, cache exists → STALE, failures += 1
+- Check fails, no cache → DOWN (no cache to return as STALE), failures = 1
+- 3 failures reached → even if returning STALE, mark as DOWN, trigger alert
+I think the cleanest approach:
+# In _check_single_url:
+on success → UP, failures=0
+on failure:
+  if cached result exists:
+    result = cached copy with STALE status, failures += 1
+  else:
+    result = new DOWN result, failures = 1
+Then in _apply_result:
+if result.consecutive_failures >= 3:
+    result.status = "DOWN"
+    if not previously DOWN:
+        trigger alert
+This makes sense. The STALE status says "we couldn't check, here's our last known state", and after 3 consecutive STALE results, we conclude it's DOWN.
+OK, let me finalize and write the code. I've been thinking too much. Let me just produce clean, correct code.
+Here's my final design for _check_single_url:
+def _check_single_url(self, url: str) -> Tuple[str, URLCheckResult]:
+    start = time.time()
+    try:
+        response = self._session.head(url, timeout=self._timeout, allow_redirects=True)
+        elapsed = time.time() - start
+        return url, URLCheckResult(
+            url=url,
+            status="UP",
+            status_code=response.status_code,
+            response_time=round(elapsed, 3),
+            timestamp=time.time(),
+            consecutive_failures=0,
+        )
+    except requests.exceptions.Timeout as e:
+        return self._build_stale_or_down(url, f"Timeout: {e}")
+    except requests.exceptions.ConnectionError as e:
+        return self._build_stale_or_down(url, f"Connection error: {e}")
+    except requests.exceptions.RequestException as e:
+        return self._build_stale_or_down(url, f"Request error: {e}")
+    except Exception as e:
+        return self._build_stale_or_down(url, f"Unexpected error: {e}")
+def _build_stale_or_down(self, url: str, error: str) -> Tuple[str, URLCheckResult]:
+    with self._lock:
+        cached = self._results.get(url)
+    
+    if cached is not None and cached.status != "UNCHECKED":
+        return url, URLCheckResult(
+            url=url,
+            status="STALE",
+            status_code=cached.status_code,
+            response_time=cached.response_time,
+            error=error,
+            timestamp=cached.timestamp,
+            consecutive_failures=cached.consecutive_failures + 1,
+        )
+    else:
+        return url, URLCheckResult(
+            url=url,
+            status="DOWN",
+            error=error,
+            timestamp=time.time(),
+            consecutive_failures=1,
+        )
+This is clean. Let me write the full thing now.
+Actually, one issue: consecutive_failures is on the URLCheckResult. But when we create a new STALE result based on the cached one, we're reading cached.consecutive_failures and incrementing it. However, cached might have been updated between the time we read it and the time we create the new result. But since we have the lock... wait, I'm reading cached inside the lock? Let me check - no, I'm reading it inside with self._lock: in _build_stale_or_down, so it's protected. Good.
+But there's a subtle issue: between reading cached and creating the new result, someone else might modify cached. But cached is a reference to the URLCheckResult object in self._results. If we modify cached directly... wait, URLCheckResult is a dataclass and we're creating a new one, not modifying cached. So it's fine. The cached reference is just read, not modified. The new result is a fresh object.
+OK, this is solid. Let me write the code.
+Actually, one more thing. I need to be careful about the as_completed iterator. If the executor is shut down while we're iterating, the iterator should handle it. But since we're in _check_loop which checks _running before and after, and the executor is shut down in stop(), there could be a race. Let me handle it by catching any exceptions from as_completed.
+Hmm, actually as_completed should work fine even if the executor is shutting down - submitted futures will either complete, be cancelled, or raise. The futures dict contains all submitted futures regardless.
+OK let me just write the code now. No more deliberating.
+Let me think about the connection pool cleanup one more time. requests.Session uses urllib3 connection pools internally. When we call session.close(), it closes all connections in the pool. If there are in-flight requests when we close the session, those requests might get ConnectionError or similar. But since we're shutting down the executor first (which cancels pending futures and waits for running ones), this should be safe.
+Actually, executor.shutdown(wait=True) waits for running futures to complete. During this time, running HTTP requests might still be using the session. So the order should be:
+1. Set _running = False (stop the loop from submitting more)
+2. Wait for the check loop thread to finish
+3. Shut down the executor (wait for in-progress checks)
+4. Close the session
+This is the correct order. Let me implement it.
+For _check_loop, I use the sleep-in-chunks approach so it can exit quickly when _running becomes False.
+OK, I'm writing it now. For real this time.
+Let me think about one more edge case: what if alert_callback itself raises an exception? I should wrap it in a try-except to avoid crashing the checker.
+Also, let me consider: should the callback be called synchronously (blocking the check loop) or asynchronously? I'll call it synchronously but wrap in try-except. If the user wants async, they can implement it in their callback.
+Here's the final structure:
+#!/usr/bin/env python3
+import threading
+import time
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Dict, Callable, Optional, List, Tuple, Set
+@dataclass
+class URLCheckResult:
+    url: str
+    status: str  # "UP", "DOWN", "STALE", "UNCHECKED"
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    error: Optional[str] = None
+    timestamp: float = field(default_factory=time.time)
+    consecutive_failures: int = 0
+class HealthChecker:
+    """Thread-safe URL health checker with caching, STALE mode, and alerting."""
+    
+    def __init__(
+        self,
+        check_interval: float = 30.0,
+        cache_ttl: float = 60.0,
+        timeout: float = 5.0,
+        max_workers: int = 10,
+        alert_callback: Optional[Callable[[URLCheckResult], None]] = None,
+    ):
+        self._check_interval = check_interval
+        self._cache_ttl = cache_ttl
+        self._timeout = timeout
+        self._max_workers = max_workers
+        self._alert_callback = alert_callback
+        self._urls: Set[str] = set()
+        self._results: Dict[str, URLCheckResult] = {}
+        self._down_notified: Set[str] = set()
+        self._lock = threading.RLock()
+        self._running = False
+        self._check_thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._session: Optional[requests.Session] = None
+    def add_url(self, url: str) -> None:
+        with self._lock:
+            if url not in self._urls:
+                self._urls.add(url)
+                self._results[url] = URLCheckResult(url=url, status="UNCHECKED")
+    def remove_url(self, url: str) -> None:
+        with self._lock:
+            self._urls.discard(url)
+            self._results.pop(url, None)
+            self._down_notified.discard(url)
+    def get_status(self, url: str) -> Optional[URLCheckResult]:
+        with self._lock:
+            return self._results.get(url)
+    def get_all_statuses(self) -> Dict[str, URLCheckResult]:
+        with self._lock:
+            return {url: self._results[url] for url in self._urls}
+    def start(self) -> None:
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._session = requests.Session()
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=self._max_workers,
+                pool_maxsize=self._max_workers,
+                max_retries=0,
+            )
+            self._session.mount("https://", adapter)
+            self._session.mount("http://", adapter)
+            self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
+            self._check_thread = threading.Thread(
+                target=self._check_loop, daemon=True, name="HealthChecker"
+            )
+            self._check_thread.start()
+    def stop(self) -> None:
+        with self._lock:
+            self._running = False
+        if self._check_thread is not None and self._check_thread.is_alive():
+            self._check_thread.join(timeout=self._check_interval + 10)
+        if self._executor is not None:
+            self._executor.shutdown(wait=True, cancel_futures=True)
+        if self._session is not None:
+            self._session.close()
+        with self._lock:
+            self._executor = None
+            self._session = None
+    def _check_loop(self) -> None:
+        while True:
+            with self._lock:
+                if not self._running:
+                    return
+                urls = list(self._urls)
+            if urls:
+                self._check_all_urls(urls)
+            deadline = time.time() + self._check_interval
+            while time.time() < deadline:
+                with self._lock:
+                    if not self._running:
+                        return
+                time.sleep(min(1.0, deadline - time.time()))
+    def _check_all_urls(self, urls: List[str]) -> None:
+        to_check = []
+        now = time.time()
+        for url in urls:
+            with self._lock:
+                result = self._results.get(url)
+            if result is None or now - result.timestamp >= self._cache_ttl:
+                to_check.append(url)
+        if not to_check:
+            return
+        futures = {}
+        for url in to_check:
+            future = self._executor.submit(self._check_single_url, url)
+            futures[future] = url
+        for future in as_completed(futures):
+            try:
+                url, result = future.result()
+                self._apply_result(url, result)
+            except Exception:
+                pass
+    def _check_single_url(self, url: str) -> Tuple[str, URLCheckResult]:
+        start = time.time()
+        try:
+            response = self._session.head(
+                url, timeout=self._timeout, allow_redirects=True
+            )
+            elapsed = time.time() - start
+            return url, URLCheckResult(
+                url=url,
+                status="UP",
+                status_code=response.status_code,
+                response_time=round(elapsed, 3),
+                timestamp=time.time(),
+                consecutive_failures=0,
+            )
+        except requests.exceptions.Timeout as e:
+            return self._build_stale_or_down(url, f"Timeout: {e}")
+        except requests.exceptions.ConnectionError as e:
+            return self._build_stale_or_down(url, f"Connection error: {e}")
+        except requests.exceptions.RequestException as e:
+            return self._build_stale_or_down(url, f"Request error: {e}")
+        except Exception as e:
+            return self._build_stale_or_down(url, f"Unexpected: {e}")
+    def _build_stale_or_down(self, url: str, error: str) -> Tuple[str, URLCheckResult]:
+        with self._lock:
+            cached = self._results.get(url)
+        if cached is not None and cached.status != "UNCHECKED":
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                status_code=cached.status_code,
+                response_time=cached.response_time,
+                error=error,
+                timestamp=cached.timestamp,
+                consecutive_failures=cached.consecutive_failures + 1,
+            )
+        else:
+            return url, URLCheckResult(
+                url=url,
+                status="DOWN",
+                error=error,
+                timestamp=time.time(),
+                consecutive_failures=1,
+            )
+    def _apply_result(self, url: str, result: URLCheckResult) -> None:
+        fire_alert = False
+        with self._lock:
+            if url not in self._urls:
+                return
+            if result.consecutive_failures >= 3:
+                result.status = "DOWN"
+                if url not in self._down_notified:
+                    self._down_notified.add(url)
+                    fire_alert = True
+            elif result.status == "UP":
+                self._down_notified.discard(url)
+            self._results[url] = result
+        if fire_alert and self._alert_callback:
+            try:
+                self._alert_callback(result)
+            except Exception:
+                pass
+if __name__ == "__main__":
+    # Demo
+    def on_down(result: URLCheckResult):
+        print(f"\n[ALERT] {result.url} is DOWN! Error: {result.error}")
+    checker = HealthChecker(
+        check_interval=5,  # For demo, check every 5s
+        cache_ttl=10,       # Cache for 10s
+        timeout=3,
+        max_workers=5,
+        alert_callback=on_down,
+    )
+    # Add some URLs
+    checker.add_url("https://httpbin.org/get")
+    checker.add_url("https://httpbin.org/status/200")
+    checker.add_url("https://invalid.example.invalid")  # Will fail
+    print("Starting health checker...")
+    checker.start()
+    try:
+        for i in range(4):  # Run for ~25 seconds
+            time.sleep(checker._check_interval)
+            print(f"\n--- Status snapshot {i+1} ---")
+            for url, result in checker.get_all_statuses().items():
+                status_icon = {"UP": "✓", "DOWN": "✗", "STALE": "~", "UNCHECKED": "?"}
+                print(
+                    f"  {status_icon.get(result.status, '?')} {result.status:9} "
+                    f"{url:45} "
+                    f"{result.response_time or '':>7}  "
+                    f"fails={result.consecutive_failures}"
+                )
+        # Demonstrate dynamic add
+        print("\n--- Adding new URL ---")
+        checker.add_url("https://httpbin.org/status/404")
+        time.sleep(checker._check_interval)
+        for url, result in checker.get_all_statuses().items():
+            status_icon = {"UP": "✓", "DOWN": "✗", "STALE": "~", "UNCHECKED": "?"}
+            print(
+                f"  {status_icon.get(result.status, '?')} {result.status:9} "
+                f"{url:45} "
+                f"{result.response_time or '':>7}  "
+                f"fails={result.consecutive_failures}"
+            )
+        # Demonstrate remove
+        print("\n--- Removing URL ---")
+        checker.remove_url("https://invalid.example.invalid")
+        time.sleep(checker._check_interval)
+        for url, result in checker.get_all_statuses().items():
+            status_icon = {"UP": "✓", "DOWN": "✗", "STALE": "~", "UNCHECKED": "?"}
+            print(
+                f"  {status_icon.get(result.status, '?')} {result.status:9} "
+                f"{url:45} "
+                f"{result.response_time or '':>7}  "
+                f"fails={result.consecutive_failures}"
+            )
+    finally:
+        print("\nStopping health checker...")
+        checker.stop()
+        print("Health checker stopped.")
+Wait, I have an issue with consecutive_failures not being tracked correctly for STALE results. Let me think about this:
+When we check a URL and it fails:
+1. We read cached.consecutive_failures which is the failure count from the previous result
+2. We create a new result with cached.consecutive_failures + 1
+3. But wait - if the previous result was UP (failures=0), then the new STALE result has failures=1
+4. Next check cycle: if cache is fresh (< TTL), we skip. If cache expired, we check again.
+5. If check fails again, we read cached.consecutive_failures which is now 1 (from the previous STALE result), and create new STALE with failures=2.
+This seems correct! The consecutive failures increment across check cycles.
+But there's a subtle issue: the STALE result has timestamp=cached.timestamp (the old timestamp). So on the next cycle, now - result.timestamp >= self._cache_ttl will definitely be true (since the timestamp is even older than the current time). So the next check will happen in the next cycle. Good.
+Wait, but the cache TTL check happens BEFORE we check. Let me trace through:
+Cycle 1: URL is UP (timestamp = T0)
+Cycle 2: T0+30s: cache TTL is 60s, 30s < 60s → skip, use cached UP
+Cycle 3: T0+60s: cache TTL expired, check → fails → STALE (timestamp still T0, failures=1)
+Cycle 4: T0+90s: T0+90s - T0 = 90s > 60s → expired, check → fails → STALE (timestamp T0, failures=2)
+Cycle 5: T0+120s: expires, check → fails → STALE (timestamp T0, failures=3) → transitions to DOWN, alert fired
+So it takes: TTL check + 3 failed actual checks = 60 + 3*60 = 240 seconds to mark as DOWN. Actually, the first failed check happens after the cache expires (60s after last UP). Then 3 failed checks × 60s each = 180s. Total: 240s.
+Actually wait, consecutive_failures tracks the failure count, but the timestamp tracks the ORIGINAL result's timestamp when STALE. So the time between checks is always at least cache_ttl. That means 3 failures = at least 180s of downtime.
+This seems reasonable. The requirement says "连续 3 次失败" - consecutive 3 failure CHECKS (not 3 skipped periods). Since checks happen after cache expiry, it's indeed the actual HTTP check failures.
+One issue: what if the URL was just added and has status=UNCHECKED? The first check would be immediate. If it fails:
+- _build_stale_or_down checks: cached is not None but cached.status == "UNCHECKED"
+- So it returns status=DOWN, failures=1
+- Next cycle (30s later): now - result.timestamp < cache_ttl? timestamp is ~30s ago, cache_ttl=60s, so 30 < 60 → skip. But we have a DOWN result that we want to re-check...
+Wait, this is a problem. When a URL is DOWN and we got that result from a failed check, the cache still says "don't check for 60s". But we should probably re-check DOWN URLs more aggressively.
+Hmm, the requirement doesn't mention this. It says "每 30 秒检查一组 URL" and "结果缓存 60 秒". The cache TTL is for "UP" results to avoid frequent requests. For DOWN results, maybe we should also cache but with the same TTL for consistency.
+Actually, re-reading the requirement: "结果缓存 60 秒，避免频繁请求" - this is a general statement about caching. So even DOWN results are cached for 60s. The DOWN status is only set after 3 consecutive failures, and each failure happens at most once per cache_ttl period.
+I think this is fine. Let me keep it simple.
+Actually, hold on. There's a nuance. When the first check of a new URL fails, we set status=DOWN (because there's no cache to return as STALE, and the cached status is UNCHECKED which is treated as no cache). So the URL shows as DOWN immediately. But we don't fire the alert until 3 consecutive failures.
+Is this correct behavior? Let me re-read: "连续 3 次失败标记该 URL 为 DOWN，触发告警回调". So DOWN is marked after 3 failures, and the alert is triggered at that point. But in my implementation, a first-time failure also shows as DOWN (because there's no cache). 
+I think the issue is: the "DOWN" status should only be set after 3 consecutive failures. Before that, if there's no cache, the status should be something else (like "UNCHECKED" or "UNKNOWN" or just with error info).
+Let me fix this: when there's no cache and the check fails, I'll set status to "UNCHECKED" (with error info) or maybe introduce a new status. Actually, let me think about what makes sense:
+- UNCHECKED: never checked yet
+- First check fails, no cache → still UNCHECKED but with error info, failures=1
+- Second check fails → STALE (since cached result exists and it's a failed check), failures=2
+- Third check fails → STALE, failures=3 → transition to DOWN
+But the requirement says "连续 3 次检查失败：标记该 URL 为 DOWN". So DOWN is only after 3 failures. Let me change the first-failure-no-cache case to not use DOWN:
+if cached is not None and cached.status != "UNCHECKED":
+    # Have a meaningful cache → return STALE
+    return STALE with failures + 1
+else:
+    # No cache or UNCHECKED → keep as UNCHECKED but record error
+    return UNCHECKED with error, failures = 1
+Then in _apply_result, when failures >= 3, change to DOWN.
+Wait, but the status would go: UNCHECKED (failures=1) → STALE (failures=2) → STALE (failures=3) → DOWN.
+Hmm, the first failure with no cache - should it be UNCHECKED or something else? Let me think...
+UNCHECKED means "haven't checked yet" or "first check in progress". Once we've checked (even if it failed), it's been checked. So maybe I should use a different approach.
+Let me re-read the user's requirement one more time:
+"连续 3 次检查失败：标记该 URL 为 "DOWN"，触发回调函数"
+"网络不可用时，返回上次缓存结果（STALE 模式）"
+So:
+- Normal flow: check → UP/DOWN based on HTTP response code
+- Timeout/network error → STALE (return last cached result)
+- 3 consecutive failures (including STALE → which means failures during re-checks) → DOWN
+I think the simplest approach is:
+- Status can be: UNCHECKED, UP, STALE, DOWN
+- UNCHECKED → initial state, or after first check with no previous cache
+- After first check (even if failed): some other status
+- After 3 failures: DOWN
+Actually, let me just make the first failure without cache also be STALE-like but with failures=1. Then on the 3rd failure, transition to DOWN. The status progression would be:
+Check 1 fails (no cache): STALE, failures=1 (using a default "failed" result as fake cache)
+Check 2 fails: STALE, failures=2
+Check 3 fails: DOWN, failures=3 → alert!
+But STALE without any previous successful check is weird. Let me think differently.
+OK, I think the cleanest approach is to just use a clear flow:
+For a new URL:
+1. First check: if fails → store result with the error, failures=1, status stays as "failure state" (I'll call it UNCHECKED_FAIL)
+2. Second check: cache expired → check fails → STALE (using previous result as cache), failures=2
+3. Third check: cache expired → check fails → STALE/→DOWN, failures=3 → alert!
+Actually, I'm overcomplicating this. Let me just use a simple approach:
+When check fails:
+- If there's a previous result (any result): copy it, mark as STALE, increment failures
+- If there's no previous result (first check ever): create a DOWN-like result but with STALE... no.
+You know what, let me just use the original approach but only trigger the alert at 3 failures. The "DOWN" status showing early for first-failure-no-cache is acceptable because:
+1. It shows the URL is unreachable
+2. The alert (which is the important part) only fires at 3 consecutive failures
+3. The consecutive failures counter shows the progression
+But if the requirement specifically says "连续 3 次失败标记该 URL 为 DOWN", meaning DOWN should ONLY appear after 3 failures, then I need to not show DOWN on the first failure.
+Let me do this: when no cache and check fails, use a "UNKNOWN" or keep "UNCHECKED" but with incremented failures. But wait, we've already "checked" it (just failed). Hmm.
+OK, I'll just use UNCHECKED for first-failure-no-cache case, and then STALE for subsequent failures. The transition to DOWN happens at failures >= 3 in _apply_result.
+Wait, actually, I realize the flow would be:
+First check fails (no prev): result with status=UNCHECKED (or I could keep it as "UNCHECKED"), failures=1, error=message
+Cache this result in _results.
+Next check: cache expired (UNCHECKED result timestamp + cache_ttl < now). Check fails again. Now:
+- cached result exists (UNCHECKED), cached.status != "UNCHECKED"? No, it IS UNCHECKED.
+- So it goes to the else branch again → create another UNCHECKED, failures=2?
+But that doesn't match the "STALE" requirement. The requirement says timeout/network error → return STALE cache.
+Hmm, let me think of UNCHECKED as "no meaningful cache". The cache only has value if it was from a successful check (UP) or a STALE/DOWN. So UNCHECKED doesn't count as a cache.
+For the "return STALE cache" requirement:
+- If we have a previous UP/DOWN/STALE result → return it as STALE
+- If no previous meaningful result → return... what? We can't return STALE with no data.
+So for first-time failure, we just report the error. Let me mark it as "UNCHECKED" with error info, and then on the second failure, since we do have a previous result (even if it was a failed one), we can return it as STALE.
+Wait, but the UNCHECKED result has error info and timestamp. That IS useful as stale data. It tells us "last check failed with this error". So we could treat it as STALE too.
+OK, I think the simplest and most correct approach is:
+In _build_stale_or_down:
+if cached is not None and cached.status != "UNCHECKED":
+    # Even previous failures are useful as stale data
+    return STALE with failures += 1
+else:
+    # First check or UNCHECKED → report error, no stale data
+    return DOWN with failures = 1, no response_time
+Wait, but cached.status != "UNCHECKED" would skip UNCHECKED results. And then UNCHECKED + first check fail → DOWN with failures=1.
+Then on next cycle:
+- Cached result is DOWN with failures=1
+- Check fails again → cached.status is "DOWN" != "UNCHECKED" → STALE with failures=2
+- Next cycle → STALE with failures=3 → _apply_result changes to DOWN and fires alert
+This means:
+1st failure: DOWN, failures=1 (status shown as DOWN but no alert - acceptable since it IS down, just not "confirmed" down)
+2nd failure: STALE, failures=2
+3rd failure: STALE → DOWN transition, failures=3 → alert!
+Hmm, the first failure showing as DOWN is a bit misleading because we only had one failure. But technically, the URL IS unreachable right now. The consecutive failures counter shows the progression.
+Actually, I think this is fine. Let me go with this approach. The key points:
+1. First failure without cache → status shows the URL is unreachable (could be DOWN or a temp status)
+2. Alert only fires at 3 consecutive failures
+3. STALE is used when there's previous data to fall back on
+Actually, you know what, let me just not overthink the status labels and focus on correctness:
+- "UNCHECKED" = never checked (initial state)
+- "UP" = last check successful
+- "STALE" = last check failed, returning cached result
+- "DOWN" = confirmed down (3 consecutive failures)
+For the first failure without cache, I'll just not label it as DOWN. I'll create a new approach:
+If no previous cache exists (UNCHECKED or no entry), and check fails:
+- Set status to "DOWN_FIRST" or just "UNCHECKED_FAIL"... nah this complicates things.
+OK FINAL DECISION: For the first check failure without a valid cache, I'll use status "STALE" as well but with a fabricated "previous" result (empty/default values). This way the status progression is clean:
+- UNCHECKED → STALE (fail 1) → STALE (fail 2) → DOWN (fail 3)
+No, this is lying about having previous data.
+OK TRULY FINAL DECISION: I'll handle it like this:
+- First failure, no cache: mark as a result with status being the error description or keep as a failed state. Let me just make it simple and keep the original logic where first failure = DOWN-like but alert only at 3 failures. The code is simpler and the behavior is clear.
+Wait, actually, one more thought. Let me re-read:
+"连续 3 次失败标记该 URL 为 "DOWN"，触发告警回调"
+The requirement connects "标记为 DOWN" with "触发告警回调". So:
+- Before 3 failures: not DOWN (some other status), no alert
+- After 3 failures: DOWN, alert
+"网络不可用时，返回上次缓存结果（STALE 模式）"
+"请求超时（5秒无响应）：不崩溃，返回 STALE 缓存"
+So when a check fails (timeout/network), we return STALE. But if there's no cache (first check), we can't return STALE (no data). In that case, what do we return? The requirement doesn't specify this edge case explicitly.
+I think the most reasonable approach for the first failure without cache:
+- Return the failure as a result but don't mark it as DOWN (since it's only the 1st failure)
+- Keep it as... let me just call it with status = the error type or "FAIL" or something
+Actually, let me just use a practical approach. I'll not use "DOWN" for the first two failures. Instead, I'll keep the status reflecting the actual situation:
+# No cached result exists
+return URLCheckResult(
+    url=url,
+    status="UNCHECKED",  # First check failed, still no meaningful data
+    error=error,
+    timestamp=time.time(),
+    consecutive_failures=1,
+)
+Wait, but "UNCHECKED" with error and consecutive_failures=1 is contradictory - we DID check it, it just failed.
+OK I'm going to stop deliberating and just go with a pragmatic approach. Status "DOWN" will be used for confirmed-down (3+ failures). For earlier failures:
+- If cache exists → STALE (returning cached data)
+- If no cache → use status "STALE" too but with empty/baseline data
+No wait, that's misleading too. Let me just introduce a status that simply means "check failed":
+Actually, let me re-read the requirement one more time carefully:
+"连续 3 次检查失败：标记该 URL 为 "DOWN"，触发回调函数"
+This could be interpreted as: when a URL has 3 consecutive check failures, CHANGE its status to DOWN and trigger the callback. Before that, it could be in any state. The "STALE" state is for when network is unavailable and we return cached data.
+So the state machine is:
+- UNCHECKED: initial
+- UP: check succeeded (or cache is fresh from a successful check)
+- STALE: check failed but we have cached data to return
+- DOWN: 3 consecutive failures confirmed
+For the first failure without cache, we don't have a cached result to return as STALE. So what status? I think it could just stay as UNCHECKED but with consecutive_failures tracked, or I could call it... 
+You know what, let me just make "STALE" work even without previous meaningful data. I'll provide default empty values. The STALE status just means "we couldn't check, here's whatever we have (possibly nothing)". Then when consecutive_failures hits 3, it transitions to DOWN.
+Hmm, but STALE without any data to return doesn't make sense. The whole point of STALE is "here's the last known good data."
+OK let me just simplify greatly. I'll have 4 states:
+1. UNCHECKED - initial
+2. UP - confirmed up
+3. DOWN - confirmed down (3+ failures) OR first failure without cache
+4. STALE - check failed but returning cached data
+For the first failure without cache: mark as DOWN (URL is unreachable). The alert only fires at 3 consecutive failures. This is the simplest and most useful behavior.
+Actually, hmm, I want to distinguish between "first failure, might be temporary" and "3 failures, confirmed down". But using DOWN for both is confusing for the user.
+FINAL FINAL decision: I'll handle this by:
+- First failure without cache: status = error summary (like "ERR_CONNECTION"), consecutive_failures=1
+- Subsequent failures with cache: status = STALE, consecutive_failures incremented
+- At 3 consecutive failures: status = DOWN, alert fires
+For the error summary, I'll use a string that indicates it's an error but not confirmed down, like just showing the error type. But that's inconsistent with the status being a fixed set of values.
+ARGH. Let me just do what makes sense:
+- UNCHECKED for initial and first-failure-without-cache
+- When UNCHECKED and check fails → stay UNCHECKED but track error and failures
+- UNCHECKED with failures incremented
+- When failures reach 3 → change to DOWN
+Wait, UNCHECKED with consecutive failures 2 doesn't make sense either.
+OK. The simplest, cleanest approach:
+For the first failure without cache, I'll just keep status as the last known state. Since there's no last known state, I'll use... let me just invent a state. I'll just use the empty string for error info and keep it simple into "STALE" with default values:
+NO. I'm going to use a practical approach. Let me separate the concept:
+- status represents the current known state: UP, DOWN (confirmed), STALE (using cached data), UNCHECKED
+- consecutive_failures tracks the failure count
+- The alert fires at 3 failures
+For first check failure with no cache:
+URLCheckResult(
+    url=url,
+    status="STALE",  # We tried, failed, returning "stale" data (which is nothing useful)
+    error=error,
+    consecutive_failures=1,
+    ... no status_code, no response_time ...
+)
+Hmm, STALE implies we're returning cached data and the cache is empty. That's misleading but works.
+Actually wait, the user calls get_status() and sees STALE with no status_code and no response_time, but error is set. That's informative enough.
+OK I'm going with this for real now. But let me change "STALE" in the first-failure-no-cache case to something more appropriate...
+ALRIGHT. For real this time. Code:
+def _build_stale_or_down(self, url, error):
+    with self._lock:
+        cached = self._results.get(url)
+    
+    # Have a valid previous result to return as STALE?
+    if cached is not None and cached.timestamp > 0 and cached.status != "UNCHECKED":
+        return URLCheckResult(
+            url=url,
+            status="STALE",
+            status_code=cached.status_code,
+            response_time=cached.response_time,
+            error=error,
+            timestamp=cached.timestamp,
+            consecutive_failures=cached.consecutive_failures + 1,
+        )
+    else:
+        # No cache to return - record the failure
+        # Using "STALE" with empty data
+        return URLCheckResult(
+            url=url,
+            status="STALE",
+            error=error,
+            timestamp=time.time(),
+            consecutive_failures=1,
+        )
+Then in _apply_result:
+if result.consecutive_failures >= 3:
+    result.status = "DOWN"
+    if url not in self._down_notified:
+        self._down_notified.add(url)
+        fire_alert = True
+This means:
+- First failure: STALE (no data), failures=1
+- Second failure: STALE (returning previous STALE), failures=2
+- Third failure: STALE → DOWN transition, failures=3, alert!
+The third failure is initially STALE (returning the previous STALE data), then _apply_result changes it to DOWN and fires the alert.
+But wait - at the 2nd failure, the STALE result has timestamp=cached.timestamp from the 1st failure. So this timestamp is preserved. At the 3rd check, cache TTL check: if time since 1st failure > cache_ttl, check again, fails → STALE (returning 2nd STALE data), failures=3 → DOWN.
+Actually, the timestamp for STALE results with previous data is set to cached.timestamp. So all STALE results point back to the original timestamp. This means each subsequent check cycle WILL trigger a re-check (since the timestamp is never updated on failures). 
+For the first failure (no cache), I set timestamp=time.time(). But if I want consistent behavior, maybe I should keep the first failure's timestamp too? 
+Hmm, here's the flow:
+1. First check fails: result with timestamp=T1, status=STALE, failures=1
+2. Cycle 2 (T1+30s): T1+30 - T1 = 30 < cache_ttl(60) → skip check. Wait, but we WANT to check again to increment failures...
+This is the fundamental issue. With cache TTL of 60s and check interval of 30s, every other cycle uses cache. So:
+- T1: check fails → STALE, failures=1
+- T1+30: cache still fresh (30s < 60s) → skip
+- T1+60: cache expired → check fails → STALE, failures=2
+- T1+90: cache fresh → skip
+- T1+120: cache expired → check fails → STALE, failures=3 → DOWN
+So 3 failures takes 120 seconds (2 minutes) with 60s cache TTL. That's fine.
+But wait, for the consecutive_failures tracking, do we want to count the "skip" cycles as failures? No, the requirement says "连续 3 次检查失败" - 3 consecutive CHECK failures, meaning actual HTTP check failures.
+OK this is correct. Only actual HTTP check failures count. Skipped cycles (using cache) don't count.
+But here's a UX issue: during the skipped cycles (T1+30, T1+90), if the user calls get_status(), they'd see the cached STALE result with failures=1 (or 2). They wouldn't see the failure count increment until the next actual check. That seems fine for a health checker that operates on a cache-TTL basis.
+Wait, but what about the "STALE" status for timeout? The requirement says: "请求超时（5秒无响应）：不崩溃，返回 STALE 缓存". So on timeout, we return STALE. And STALE means we're using cached data. If there's no cached data (first check), we can't return STALE. But our code returns STALE with no data for the first failure. Is that acceptable?
+I think yes. The important thing is that the system doesn't crash and returns some result. If there's no cached data to return, we return a minimal result indicating the error.
+Alright, I'm going to write the final code now. No more changes to the logic. I'll clean it up and make it production-quality.
+Let me also make the __main__ demo good with clear output.
+One more thing: should I handle the case where _session is None in _check_single_url? This could happen if stop() is called between the time a check is submitted to the executor and when it runs. Yes, I should guard against it.
+Actually, stop() sets _session = None inside a lock. But _check_single_url accesses self._session without the lock. There could be a race. Let me fix this by either:
+1. Taking the lock when accessing _session in _check_single_url
+2. Or storing _session in a local variable at the start of the check
+I'll go with option 2: capture _session before the check.
+Actually, looking at my code, _check_single_url just does self._session.head(...). If I'm inside the executor and stop() is called, self._session might become None or the session might be closed. The requests library should handle this with a ConnectionError which I already catch.
+But there's a more subtle issue: Python's None doesn't have a .head() method, so self._session.head() would raise AttributeError if self._session is None. Let me add a check:
+def _check_single_url(self, url):
+    session = self._session
+    if session is None:
+        return url, URLCheckResult(
+            url=url,
+            status="STALE",
+            error="Checker is stopped",
+            ...
+        )
+Hmm, but this adds complexity. Since stop() waits for the check thread and executor to finish before setting _session = None, _check_single_url should only run while _session is valid. The stop() method:
+1. Sets _running = False → loop exits
+2. _check_thread.join() → waits for loop to finish
+3. _executor.shutdown(wait=True) → waits for all running futures
+4. _session.close() + _session = None
+So by the time _session = None is set, all _check_single_url calls should have completed. There's no race condition. Good.
+But what if the executor shutdown takes too long? The wait=True will wait indefinitely. In extreme cases, a stuck HTTP request could hang the shutdown. This is an edge case but let me handle it with a timeout or just accept it.
+I think it's fine as is. Let me write the code now.
+Actually, one more thing about _build_stale_or_down: I'm reading cached inside a lock, but then I use cached outside the lock. Since I'm only reading its attributes (not modifying them), and URLCheckResult is effectively immutable (dataclass), this should be safe. The worst case is that cached is a reference to an object that gets replaced in _results by another thread. But since I already read the attributes, this doesn't matter.
+OK, writing the code now. For real.
+Let me also think about the demo. I want to show:
+1. Adding URLs
+2. First check results
+3. Subsequent checks showing cache behavior
+4. A URL failing (using an invalid domain)
+5. After 3 failures → DOWN alert
+6. Dynamic add/remove
+7. Clean shutdown
+But waiting for 3 failures would take 5 * 3 = 15 seconds minimum (if check_interval=5 and cache_ttl is expired each time). Actually, if cache_ttl is also 5 seconds:
+- Check interval: 5s
+- Cache TTL: 5s
+- Every check cycle hits cache expiry → every check does HTTP
+- 3 failures = 15 seconds
+For demo purposes, I'll use shorter intervals: check_interval=3, cache_ttl=5.
+Wait, but the 3 failures with cache_ttl=5 and check_interval=3:
+- T=0: check fails (first), skip isn't triggered because timestamp is 0 for new URL... actually newly added URLs get a URLCheckResult with timestamp=time.time() which is the current time. Then on the first cycle, now - timestamp might be very small (near 0), so cache is fresh → skip first check.
+Hmm, let me trace through with a newly added URL:
+1. add_url("https://invalid.example.invalid") → results"url" = URLCheckResult(timestamp=T0, status="UNCHECKED")
+2. Check loop starts: urls = "https://invalid.example.invalid"
+3. For this URL: result.timestamp = T0. now = T0 + delta (small). now - T0 < cache_ttl(5) → skip. 
+So the first check is SKIPPED because the cache is "fresh" (just created). That's wrong. We should immediately check newly added URLs.
+Fix: set timestamp to 0 for UNCHECKED URLs, or set timestamp to (now - cache_ttl - 1) to force immediate check.
+def add_url(self, url):
+    with self._lock:
+        if url not in self._urls:
+            self._urls.add(url)
+            self._results[url] = URLCheckResult(
+                url=url,
+                status="UNCHECKED",
+                timestamp=0.0,  # Force immediate check
+            )
+This way, now - 0 >= cache_ttl is always true, so the first check happens immediately.
+Good catch. Let me incorporate this.
+Alright, truly writing the code now. Here's my FINAL version:
+#!/usr/bin/env python3
+"""URL Health Checker - periodic HTTP HEAD checks with caching, STALE mode, and alerting."""
+import threading
+import time
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Dict, Callable, Optional, List, Tuple, Set
+@dataclass
+class URLCheckResult:
+    url: str
+    status: str = "UNCHECKED"
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    error: Optional[str] = None
+    timestamp: float = 0.0
+    consecutive_failures: int = 0
+class HealthChecker:
+    def __init__(
+        self,
+        check_interval: float = 30.0,
+        cache_ttl: float = 60.0,
+        timeout: float = 5.0,
+        max_workers: int = 10,
+        alert_callback: Optional[Callable[[URLCheckResult], None]] = None,
+    ):
+        self._check_interval = check_interval
+        self._cache_ttl = cache_ttl
+        self._timeout = timeout
+        self._max_workers = max_workers
+        self._alert_callback = alert_callback
+        self._urls: Set[str] = set()
+        self._results: Dict[str, URLCheckResult] = {}
+        self._down_notified: Set[str] = set()
+        self._lock = threading.RLock()
+        self._running = False
+        self._check_thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._session: Optional[requests.Session] = None
+    def add_url(self, url: str) -> None:
+        with self._lock:
+            if url not in self._urls:
+                self._urls.add(url)
+                self._results[url] = URLCheckResult(url=url, timestamp=0.0)
+    def remove_url(self, url: str) -> None:
+        with self._lock:
+            self._urls.discard(url)
+            self._results.pop(url, None)
+            self._down_notified.discard(url)
+    def get_status(self, url: str) -> Optional[URLCheckResult]:
+        with self._lock:
+            return self._results.get(url)
+    def get_all_statuses(self) -> Dict[str, URLCheckResult]:
+        with self._lock:
+            return {url: self._results[url] for url in self._urls}
+    def start(self) -> None:
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._session = requests.Session()
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=self._max_workers,
+                pool_maxsize=self._max_workers,
+                max_retries=0,
+            )
+            self._session.mount("https://", adapter)
+            self._session.mount("http://", adapter)
+            self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
+            self._check_thread = threading.Thread(
+                target=self._check_loop, daemon=True, name="HealthChecker"
+            )
+            self._check_thread.start()
+    def stop(self) -> None:
+        with self._lock:
+            self._running = False
+        if self._check_thread is not None and self._check_thread.is_alive():
+            self._check_thread.join(timeout=self._check_interval + 10)
+        if self._executor is not None:
+            self._executor.shutdown(wait=True, cancel_futures=True)
+        if self._session is not None:
+            self._session.close()
+        with self._lock:
+            self._executor = None
+            self._session = None
+    def _check_loop(self) -> None:
+        while True:
+            with self._lock:
+                if not self._running:
+                    return
+                urls = list(self._urls)
+            if urls:
+                self._check_all_urls(urls)
+            deadline = time.time() + self._check_interval
+            while time.time() < deadline:
+                with self._lock:
+                    if not self._running:
+                        return
+                time.sleep(min(1.0, deadline - time.time()))
+    def _check_all_urls(self, urls: List[str]) -> None:
+        to_check = []
+        now = time.time()
+        for url in urls:
+            with self._lock:
+                result = self._results.get(url)
+            if result is None or (now - result.timestamp) >= self._cache_ttl:
+                to_check.append(url)
+        if not to_check:
+            return
+        futures = {}
+        for url in to_check:
+            try:
+                future = self._executor.submit(self._check_single_url, url)
+                futures[future] = url
+            except RuntimeError:
+                return
+        for future in as_completed(futures):
+            try:
+                url, result = future.result()
+                self._apply_result(url, result)
+            except Exception:
+                pass
+    def _check_single_url(self, url: str) -> Tuple[str, URLCheckResult]:
+        start = time.time()
+        try:
+            response = self._session.head(
+                url, timeout=self._timeout, allow_redirects=True
+            )
+            elapsed = time.time() - start
+            return url, URLCheckResult(
+                url=url,
+                status="UP",
+                status_code=response.status_code,
+                response_time=round(elapsed, 3),
+                timestamp=time.time(),
+                consecutive_failures=0,
+            )
+        except requests.exceptions.Timeout as e:
+            return self._build_stale_or_down(url, f"Timeout: {e}")
+        except requests.exceptions.ConnectionError as e:
+            return self._build_stale_or_down(url, f"Connection error: {e}")
+        except requests.exceptions.RequestException as e:
+            return self._build_stale_or_down(url, f"Request error: {e}")
+        except Exception as e:
+            return self._build_stale_or_down(url, f"Unexpected error: {e}")
+    def _build_stale_or_down(self, url: str, error: str) -> Tuple[str, URLCheckResult]:
+        with self._lock:
+            cached = self._results.get(url)
+        if cached is not None and cached.timestamp > 0:
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                status_code=cached.status_code,
+                response_time=cached.response_time,
+                error=error,
+                timestamp=cached.timestamp,
+                consecutive_failures=cached.consecutive_failures + 1,
+            )
+        else:
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                error=error,
+                timestamp=time.time(),
+                consecutive_failures=1,
+            )
+    def _apply_result(self, url: str, result: URLCheckResult) -> None:
+        fire_alert = False
+        with self._lock:
+            if url not in self._urls:
+                return
+            if result.consecutive_failures >= 3:
+                result.status = "DOWN"
+                if url not in self._down_notified:
+                    self._down_notified.add(url)
+                    fire_alert = True
+            elif result.status == "UP":
+                self._down_notified.discard(url)
+            self._results[url] = result
+        if fire_alert and self._alert_callback:
+            try:
+                self._alert_callback(result)
+            except Exception:
+                pass
+if __name__ == "__main__":
+    import signal
+    import sys
+    def on_down(result: URLCheckResult) -> None:
+        timestamp = time.strftime("%H:%M:%S", time.localtime(result.timestamp))
+        print(f"\n{'='*60}")
+        print(f"[ALERT] {timestamp} - {result.url} is DOWN!")
+        print(f"        Error: {result.error}")
+        print(f"        Consecutive failures: {result.consecutive_failures}")
+        print(f"{'='*60}")
+    checker = HealthChecker(
+        check_interval=4.0,
+        cache_ttl=6.0,
+        timeout=3.0,
+        max_workers=5,
+        alert_callback=on_down,
+    )
+    checker.add_url("https://httpbin.org/get")
+    checker.add_url("https://httpbin.org/status/200")
+    checker.add_url("https://invalid.example.invalid")
+    print("Health Checker Demo")
+    print("=" * 60)
+    print(f"Config: check_interval={checker._check_interval}s, "
+          f"cache_ttl={checker._cache_ttl}s, timeout={checker._timeout}s")
+    print(f"Monitoring {len(checker._urls)} URLs")
+    print("=" * 60)
+    checker.start()
+    try:
+        for i in range(8):
+            time.sleep(checker._check_interval)
+            print(f"\n--- Snapshot {i+1} at {time.strftime('%H:%M:%S')} ---")
+            statuses = checker.get_all_statuses()
+            for url, result in statuses.items():
+                icon = {"UP": "\u2713", "DOWN": "\u2717", "STALE": "~", "UNCHECKED": "?"}
+                rt = f"{result.response_time:.3f}s" if result.response_time else "-"
+                sc = result.status_code or "-"
+                print(f"  {icon.get(result.status, '?')} {result.status:9} | "
+                      f"HTTP {sc:>3} | {rt:>8} | fails={result.consecutive_failures} | "
+                      f"{result.error or ''}")
+        # Dynamic add/remove demo
+        print(f"\n--- Adding URL ---")
+        checker.add_url("https://httpbin.org/status/503")
+        time.sleep(checker._check_interval)
+        statuses = checker.get_all_statuses()
+        for url, result in statuses.items():
+            icon = {"UP": "\u2713", "DOWN": "\u2717", "STALE": "~", "UNCHECKED": "?"}
+            print(f"  {icon.get(result.status, '?')} {result.status:9} | {url}")
+        print(f"\n--- Removing URL ---")
+        checker.remove_url("https://invalid.example.invalid")
+        time.sleep(checker._check_interval)
+        statuses = checker.get_all_statuses()
+        print(f"  URLs remaining: {len(statuses)}")
+        for url, result in statuses.items():
+            icon = {"UP": "\u2713", "DOWN": "\u2717", "STALE": "~", "UNCHECKED": "?"}
+            print(f"  {icon.get(result.status, '?')} {result.status:9} | {url}")
+        print("\n--- Stopping ---")
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+    finally:
+        checker.stop()
+        print("Health checker stopped cleanly.")
+    # Verify clean shutdown
+    assert checker._check_thread is None or not checker._check_thread.is_alive()
+    assert checker._executor is None
+    assert checker._session is None
+    print("Clean shutdown verified: all resources released.")
+Wait, there's still the issue that cancel_futures=True is Python 3.9+. Let me keep it since Python 3.9 is from 2020, should be widely available. But I could add a fallback:
+try:
+    self._executor.shutdown(wait=True, cancel_futures=True)
+except TypeError:
+    self._executor.shutdown(wait=True)
+Actually, let me just do the simpler version without cancel_futures:
+self._executor.shutdown(wait=True)
+The wait=True ensures all running futures complete. Pending futures that haven't started won't be run after shutdown is called. Actually, they will still run if they were already submitted. cancel_futures=True (3.9+) cancels pending futures.
+Hmm, but without cancel_futures, submitted futures might still run during shutdown. They'd complete and try to update self._results, but the check loop has already stopped (we set _running=False). Also, by the time executor.shutdown(wait=True) returns, all submitted futures have completed.
+So the flow is:
+1. stop() called
+2. _running = False
+3. check thread exits loop
+4. _check_thread.join() waits for check thread to actually finish
+5. At this point, the check thread might have submitted some futures to the executor
+6. _executor.shutdown(wait=True) waits for all submitted futures to complete
+7. _session.close() closes the connection pool
+During step 6, in-flight HTTP requests might complete (success or failure). They'll update _results which is fine since the lock is still valid. After step 7, no more HTTP can happen.
+This is correct. Let me keep cancel_futures=True with a try-except fallback for older Python.
+Wait, I should also handle the RuntimeError from executor.submit() when the executor is shutting down. Let me add that.
+OK, final code time. Writing it now.
+One thing about the demo output - I want it to be clean, with emoji/unicode for status indicators but not overdoing it.
+Actually, the user said "Only use emojis if the user explicitly requests it." But this is for the demo code that the user is asking me to write. The demo code is just for demonstration purposes, it's part of the code being written. I'll use simple text indicators instead of emoji to be safe. Actually, I'll use unicode characters (✓, ✗) which are not exactly emojis but are commonly used in CLI tools. Let me use simple ASCII: OK, FAIL, ~, ?.
+No wait, the demo should be readable. I'll use simple text: UP, DOWN, STALE, UNCHECKED. That's clear enough.
+OK here's the truly final code. Writing it now.
+Actually, I want to double-check one more edge case: what if requests.head() raises a non-requests exception? Like a ValueError from an invalid URL? I should catch all exceptions in the check method. My current code catches RequestException (which is the base class for all requests exceptions) and then a generic Exception. This should cover everything.
+But ValueError from an invalid URL is not a RequestException - it's raised before the request is even made. The generic Exception catch would handle it. Good.
+What about KeyboardInterrupt or SystemExit? These inherit from BaseException not Exception, so they wouldn't be caught. That's correct behavior - we want them to propagate.
+OK, truly final code. Let me write it out completely now.
+Hmm, one more thought: the _check_all_urls method has this code:
+for url in to_check:
+    try:
+        future = self._executor.submit(self._check_single_url, url)
+        futures[future] = url
+    except RuntimeError:
+        return
+The RuntimeError would be raised if the executor is shut down. But since we only call _check_all_urls from _check_loop, and _check_loop only calls it while _running is True (and the executor hasn't been shut down), this should never happen. But it's a good safety measure.
+Actually, there IS a race condition: 
+1. Check loop runs, _running is True
+2. _check_loop calls _check_all_urls
+3. Meanwhile, stop() is called, sets _running = False, shuts down executor
+4. _check_all_urls tries to submit to the shut-down executor → RuntimeError
+So the RuntimeError catch is correct and important!
+Let me finalize the code now. I'll also make sure the _check_all_urls method handles the case where the executor is None or shut down.
+Actually, wait. In the shutdown flow:
+1. stop() sets _running = False (with lock)
+2. stop() calls _check_thread.join() → waits for check loop to exit
+3. The check loop sees _running = False and exits
+4. _check_thread.join() returns
+5. stop() calls executor.shutdown() 
+So steps 2-4 ensure the check loop has fully exited before the executor is shut down. There's no race between the check loop and executor shutdown. The RuntimeError catch is just a safety net.
+But what about this scenario:
+1. Check loop starts a _check_all_urls call
+2. _check_all_urls submits futures to executor
+3. as_completed is iterating over futures
+4. Meanwhile, stop() is called
+5. stop() sets _running = False
+6. Check loop iteration completes (as_completed finishes getting all results)
+7. Check loop sees _running = False and exits
+8. _check_thread.join() returns
+9. executor.shutdown(wait=True) waits for any remaining futures
+This is safe because executor.shutdown(wait=True) will wait for any in-progress futures.
+But what if _check_all_urls is stuck waiting for a future that takes a very long time (e.g., 5 second timeout HTTP request)? Then:
+1. as_completed waits for the future to complete (up to 5 seconds)
+2. Meanwhile, stop() sets _running = False
+3. stop() calls _check_thread.join(), which waits for the check loop
+4. The check loop is waiting in as_completed → _check_thread.join() blocks
+5. After 5 seconds, the future completes (timeout), as_completed returns it
+6. Check loop sees _running = False, exits
+7. _check_thread.join() returns
+8. executor.shutdown() runs
+So stop() could take up to check_interval + timeout + processing_time to complete. In the worst case, 30s + 5s + ~. This is acceptable.
+OK, I've thought about this enough. Writing the code now.
+Let me also think about what happens when _check_single_url is running inside the executor and session.close() is called. The in-progress HTTP request would get a ConnectionError (connection pool closed). Our code catches this and returns a STALE/DOWN result. That's fine.
+But wait, stop() calls session.close() AFTER executor.shutdown(wait=True), which waits for all futures to complete. So by the time session.close() is called, all _check_single_url calls have already completed. No issue.
+I'm confident the design is correct. Let me write it.
+Let me also handle one more edge: if _check_single_url raises an exception that propagates through the executor, future.result() will re-raise it. In _check_all_urls, I have except Exception: pass around future.result(). But wait, no - future.result() calls happen in the as_completed loop:
+for future in as_completed(futures):
+    try:
+        url, result = future.result()
+        self._apply_result(url, result)
+    except Exception:
+        pass
+If a future raises, future.result() re-raises the exception. My except Exception: pass catches it. Good.
+One more thing: what if self._session.head() succeeds but the response has no status_code (shouldn't happen normally)? The response.status_code is always an int in requests. So no issue.
+OK let me just write the damn code already. Here we go:
+Actually, let me also think about the allow_redirects=True behavior. When requests follows redirects with HEAD method, it uses HEAD for the redirects too. The final response status_code is the one from the last redirect. This is correct behavior for a health checker (we want to know if the final destination is reachable).
+One more thought: the requests.adapters.HTTPAdapter requires from requests.adapters import HTTPAdapter. I should import it or use requests.adapters.HTTPAdapter directly.
+OK, final code. Writing now. No more thinking.
+Hmm actually I realize I should double check something. requests.adapters.HTTPAdapter - let me verify the import path. In the requests library, it's requests.adapters.HTTPAdapter. I can do from requests.adapters import HTTPAdapter.
+Let me write the code now. I have all the logic figured out. Let me compose the final version.
+Let me also make sure the code passes python3 health_checker.py without errors. The demo should work out of the box (assuming internet connectivity).
+For the demo, I need to be careful about the URLs. https://httpbin.org/get should work. https://invalid.example.invalid should fail (DNS resolution or connection). The demo will show the progression from initial failures to DOWN after 3 consecutive failures.
+Actually, wait. For https://invalid.example.invalid, the requests library might raise different exceptions depending on the network state. It could be:
+- requests.exceptions.ConnectionError (with underlying socket.gaierror for DNS failure, or urllib3.exceptions.NewConnectionError for connection refused)
+- requests.exceptions.Timeout (if DNS hangs)
+Both are caught by my exception handlers. Good.
+OK HERE WE GO. Writing the final, clean code now. I promise.
+Alright I'm going to write it. Let me structure it:
+1. Imports
+2. URLCheckResult dataclass
+3. HealthChecker class
+   - init
+   - add_url
+   - remove_url
+   - get_status
+   - get_all_statuses
+   - start
+   - stop
+   - _check_loop
+   - _check_all_urls
+   - _check_single_url
+   - _build_stale_or_down
+   - _apply_result
+4. main demo block
+Let me be extra careful about thread safety and edge cases.
+For the _build_stale_or_down method: when cached has timestamp > 0, it means there's a valid cached result (not the initial UNCHECKED with timestamp=0). I use timestamp=0.0 for newly added URLs (UNCHECKED state). So the condition cached.timestamp > 0 correctly distinguishes between "have cached data" and "no cached data."
+But wait, if an URL was UP at some point and then we got STALE results, the STALE result's timestamp would be the original UP result's timestamp. So cached.timestamp from a STALE result is also > 0. This is correct.
+OK I realize I'm going in circles. Let me just write and save the file. The logic is sound enough.
+Let me compose the full file content now:
+#!/usr/bin/env python3
+"""
+URL Health Checker
+Checks URL health via HTTP HEAD requests with:
+- Result caching (configurable TTL)
+- STALE mode (returns last-known-good data when network is unavailable)
+- Consecutive failure tracking with alerting
+- Thread-safe dynamic URL management
+- Clean resource cleanup on stop
+"""
+import threading
+import time
+import requests
+from requests.adapters import HTTPAdapter
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Set, Tuple
+@dataclass
+class URLCheckResult:
+    """Represents the result of a single URL health check."""
+    url: str
+    status: str = "UNCHECKED"
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    error: Optional[str] = None
+    timestamp: float = 0.0
+    consecutive_failures: int = 0
+class HealthChecker:
+    """
+    Thread-safe URL health checker.
+    Checks a set of URLs periodically via HTTP HEAD requests, caches results,
+    supports STALE mode for network failures, and triggers alerts after
+    consecutive failures.
+    Usage:
+        checker = HealthChecker(alert_callback=my_handler)
+        checker.add_url("https://example.com")
+        checker.start()
+        ...
+        checker.stop()
+    """
+    def __init__(
+        self,
+        check_interval: float = 30.0,
+        cache_ttl: float = 60.0,
+        timeout: float = 5.0,
+        max_workers: int = 10,
+        alert_callback: Optional[Callable[[URLCheckResult], None]] = None,
+    ):
+        self._check_interval = check_interval
+        self._cache_ttl = cache_ttl
+        self._timeout = timeout
+        self._max_workers = max_workers
+        self._alert_callback = alert_callback
+        self._urls: Set[str] = set()
+        self._results: Dict[str, URLCheckResult] = {}
+        self._down_notified: Set[str] = set()
+        self._lock = threading.RLock()
+        self._running = False
+        self._check_thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._session: Optional[requests.Session] = None
+    # --- Public API ---
+    def add_url(self, url: str) -> None:
+        with self._lock:
+            if url not in self._urls:
+                self._urls.add(url)
+                self._results[url] = URLCheckResult(url=url, timestamp=0.0)
+    def remove_url(self, url: str) -> None:
+        with self._lock:
+            self._urls.discard(url)
+            self._results.pop(url, None)
+            self._down_notified.discard(url)
+    def get_status(self, url: str) -> Optional[URLCheckResult]:
+        with self._lock:
+            return self._results.get(url)
+    def get_all_statuses(self) -> Dict[str, URLCheckResult]:
+        with self._lock:
+            return {url: self._results[url] for url in self._urls}
+    def start(self) -> None:
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._session = requests.Session()
+            adapter = HTTPAdapter(
+                pool_connections=self._max_workers,
+                pool_maxsize=self._max_workers,
+                max_retries=0,
+            )
+            self._session.mount("https://", adapter)
+            self._session.mount("http://", adapter)
+            self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
+            self._check_thread = threading.Thread(
+                target=self._check_loop, daemon=True, name="HealthChecker"
+            )
+            self._check_thread.start()
+    def stop(self) -> None:
+        with self._lock:
+            self._running = False
+        if self._check_thread is not None and self._check_thread.is_alive():
+            self._check_thread.join(timeout=self._check_interval + 10)
+        if self._executor is not None:
+            try:
+                self._executor.shutdown(wait=True, cancel_futures=True)
+            except TypeError:
+                self._executor.shutdown(wait=True)
+        if self._session is not None:
+            self._session.close()
+        with self._lock:
+            self._executor = None
+            self._session = None
+    # --- Internal ---
+    def _check_loop(self) -> None:
+        while True:
+            with self._lock:
+                if not self._running:
+                    return
+                urls = list(self._urls)
+            if urls:
+                self._check_all_urls(urls)
+            deadline = time.time() + self._check_interval
+            while time.time() < deadline:
+                with self._lock:
+                    if not self._running:
+                        return
+                time.sleep(min(1.0, deadline - time.time()))
+    def _check_all_urls(self, urls: List[str]) -> None:
+        now = time.time()
+        to_check: List[str] = []
+        for url in urls:
+            with self._lock:
+                result = self._results.get(url)
+            if result is None or (now - result.timestamp) >= self._cache_ttl:
+                to_check.append(url)
+        if not to_check:
+            return
+        futures = {}
+        for url in to_check:
+            try:
+                future = self._executor.submit(self._check_single_url, url)
+                futures[future] = url
+            except RuntimeError:
+                return
+        for future in as_completed(futures):
+            try:
+                url, result = future.result()
+                self._apply_result(url, result)
+            except Exception:
+                pass
+    def _check_single_url(self, url: str) -> Tuple[str, URLCheckResult]:
+        start = time.time()
+        try:
+            response = self._session.head(
+                url,
+                timeout=self._timeout,
+                allow_redirects=True,
+            )
+            elapsed = time.time() - start
+            return url, URLCheckResult(
+                url=url,
+                status="UP",
+                status_code=response.status_code,
+                response_time=round(elapsed, 3),
+                timestamp=time.time(),
+                consecutive_failures=0,
+            )
+        except requests.exceptions.Timeout as e:
+            return self._build_stale_or_down(url, f"Timeout: {e}")
+        except requests.exceptions.ConnectionError as e:
+            return self._build_stale_or_down(url, f"Connection error: {e}")
+        except requests.exceptions.RequestException as e:
+            return self._build_stale_or_down(url, f"Request error: {e}")
+        except Exception as e:
+            return self._build_stale_or_down(url, f"Unexpected error: {e}")
+    def _build_stale_or_down(self, url: str, error: str) -> Tuple[str, URLCheckResult]:
+        with self._lock:
+            cached = self._results.get(url)
+        if cached is not None and cached.timestamp > 0:
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                status_code=cached.status_code,
+                response_time=cached.response_time,
+                error=error,
+                timestamp=cached.timestamp,
+                consecutive_failures=cached.consecutive_failures + 1,
+            )
+        else:
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                error=error,
+                timestamp=time.time(),
+                consecutive_failures=1,
+            )
+    def _apply_result(self, url: str, result: URLCheckResult) -> None:
+        fire_alert = False
+        with self._lock:
+            if url not in self._urls:
+                return
+            if result.consecutive_failures >= 3:
+                result.status = "DOWN"
+                if url not in self._down_notified:
+                    self._down_notified.add(url)
+                    fire_alert = True
+            elif result.status == "UP":
+                self._down_notified.discard(url)
+            self._results[url] = result
+        if fire_alert and self._alert_callback:
+            try:
+                self._alert_callback(result)
+            except Exception:
+                pass
+# ---------------------------------------------------------------------------
+# Demo
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    def on_down(result: URLCheckResult) -> None:
+        ts = time.strftime("%H:%M:%S", time.localtime(result.timestamp))
+        print(f"\n{'=' * 60}")
+        print(f"  [ALERT] {ts}  {result.url}  is  DOWN")
+        print(f"          Error: {result.error}")
+        print(f"          Consecutive failures: {result.consecutive_failures}")
+        print(f"{'=' * 60}\n")
+    checker = HealthChecker(
+        check_interval=4.0,
+        cache_ttl=6.0,
+        timeout=3.0,
+        max_workers=5,
+        alert_callback=on_down,
+    )
+    # Add test URLs
+    checker.add_url("https://httpbin.org/get")
+    checker.add_url("https://httpbin.org/status/200")
+    checker.add_url("https://invalid.example.invalid")   # Will fail (no DNS)
+    checker.add_url("https://httpbin.org/status/500")    # Server error, but UP
+    print("=" * 60)
+    print("  URL Health Checker — Demo")
+    print("=" * 60)
+    print(f"  check_interval = {checker._check_interval}s")
+    print(f"  cache_ttl      = {checker._cache_ttl}s")
+    print(f"  timeout        = {checker._timeout}s")
+    print(f"  URLs monitored = {len(checker._urls)}")
+    print("=" * 60)
+    checker.start()
+    try:
+        for i in range(8):
+            time.sleep(checker._check_interval)
+            print(f"\n--- Snapshot {i + 1}  [{time.strftime('%H:%M:%S')}] ---")
+            for url, r in checker.get_all_statuses().items():
+                icon = {"UP": "  OK", "DOWN": "DOWN", "STALE": " OLD", "UNCHECKED": " ..."}
+                sc = f"HTTP {r.status_code}" if r.status_code else "-"
+                rt = f"{r.response_time:.3f}s" if r.response_time else "-"
+                err = r.error or ""
+                print(f"  {icon.get(r.status, ' ?? '):>5} | {r.status:9} | "
+                      f"{sc:>8} | {rt:>8} | fails={r.consecutive_failures} | "
+                      f"{err[:50]}")
+        # Dynamic add / remove
+        print(f"\n--- Adding URL: https://httpbin.org/status/503 ---")
+        checker.add_url("https://httpbin.org/status/503")
+        time.sleep(checker._check_interval)
+        for url, r in checker.get_all_statuses().items():
+            icon = {"UP": "  OK", "DOWN": "DOWN", "STALE": " OLD", "UNCHECKED": " ..."}
+            print(f"  {icon.get(r.status, ' ?? '):>5} | {url}")
+        print(f"\n--- Removing URL: https://invalid.example.invalid ---")
+        checker.remove_url("https://invalid.example.invalid")
+        time.sleep(checker._check_interval)
+        print(f"  URLs remaining: {len(checker.get_all_statuses())}")
+        print("\n--- Shutting down ---")
+    except KeyboardInterrupt:
+        print("\n  Interrupted.")
+    finally:
+        checker.stop()
+        print("  Health checker stopped cleanly.")
+    # Verify cleanup
+    assert checker._check_thread is None or not checker._check_thread.is_alive(), \
+        "Check thread not cleaned up"
+    assert checker._executor is None, "Executor not cleaned up"
+    assert checker._session is None, "Session not cleaned up"
+    print("  Resource cleanup verified.")
+Hmm, let me verify the assertion checker._check_thread is None or not checker._check_thread.is_alive(). After stop(), _check_thread is NOT set to None (I don't set it to None in stop). Let me check... no, I don't set _check_thread = None in my stop() method. Let me add that to stop().
+Looking at my stop method:
+def stop(self) -> None:
+    with self._lock:
+        self._running = False
+    if self._check_thread is not None and self._check_thread.is_alive():
+        self._check_thread.join(timeout=self._check_interval + 10)
+    if self._executor is not None:
+        try:
+            self._executor.shutdown(wait=True, cancel_futures=True)
+        except TypeError:
+            self._executor.shutdown(wait=True)
+    if self._session is not None:
+        self._session.close()
+    with self._lock:
+        self._executor = None
+        self._session = None
+I set _executor = None and _session = None, but not _check_thread = None. The check thread is a daemon thread, so it will die when the program exits. But for the assertion to pass, I need to check that it's not alive (which it shouldn't be after join). Let me add _check_thread = None or just check not self._check_thread.is_alive().
+Actually, after join(), the thread might still be alive if the timeout expired. But since the loop exits when _running = False, and the sleep granularity is 1 second, the thread should exit within 1 second of _running being set to False (plus any in-progress check cycle). The join timeout is self._check_interval + 10 which should be plenty.
+For the assertion, not self._check_thread.is_alive() is fine since _check_thread is never None (it was assigned in start()). So checker._check_thread is None is False, and not checker._check_thread.is_alive() should be True. So the assertion passes. Good.
+Wait, actually, _check_thread starts as None, and after stop(), it's still the same thread object (not reset to None). So:
+- _check_thread is None → False (it was set in start())
+- not _check_thread.is_alive() → True (it exited)
+- Result: True
+The assertion passes. Good.
+Hmm wait, actually for the assertion:
+assert checker._check_thread is None or not checker._check_thread.is_alive()
+This is: (None) or (not alive) = False or True = True. Correct.
+But what about the case where stop() was NEVER called and the assertions somehow run? If the checker is still running, _check_thread.is_alive() is True, so not True = False, and None or False = False, assertion fails. But in the main block, stop() is always called. So this is fine.
+OK, the code looks good. Let me finalize it and write to file.
+Let me also think about a potential issue with as_completed + cancel_futures. When cancel_futures=True, pending futures are cancelled, and as_completed will yield them with a CancelledError. But I have except Exception: pass which would catch it (CancelledError inherits from Exception). So that's fine.
+Actually, concurrent.futures.CancelledError inherits from Exception in Python 3.9+, and from BaseException in earlier versions. But since I have except Exception: pass, it would be caught in 3.9+ but might not be in 3.8. Hmm, but cancel_futures was added in 3.9, so if cancel_futures works, CancelledError inherits from Exception. So it's fine.
+Actually, I should just catch BaseException or specifically CancelledError to be safe. Let me just use a broader catch:
+for future in as_completed(futures):
+    try:
+        url, result = future.result()
+        self._apply_result(url, result)
+    except Exception:
+        pass
+In Python 3.8 and earlier, CancelledError is a BaseException, but cancel_futures doesn't exist so cancel_futures would raise TypeError. We catch that and fall back to shutdown(wait=True) which doesn't cancel futures. So the as_completed loop would just wait for all futures to complete normally. No CancelledError would be raised. Fine.
+OK, I'm absolutely sure the code is correct now. Let me really write it.
+One last thing: I want to make sure the __main__ block handles the case where requests is not installed. A simple try-except at the top would be nice:
+if __name__ == "__main__":
+    try:
+        import requests
+    except ImportError:
+        print("Error: 'requests' library is required. Install it with: pip install requests")
+        sys.exit(1)
+But this check should be at module level or in main. I'll add it in main.
+OK NOW WRITING THE CODE.
+# Wrote health_checker.py
+#!/usr/bin/env python3
+"""
+URL Health Checker
+Periodic HTTP HEAD checks with caching, STALE fallback, consecutive-failure
+alerting, dynamic URL management, and clean resource teardown.
+"""
+import threading
+import time
+import requests
+from requests.adapters import HTTPAdapter
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Set, Tuple
+@dataclass
+class URLCheckResult:
+    url: str
+    status: str = "UNCHECKED"
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    error: Optional[str] = None
+    timestamp: float = 0.0
+    consecutive_failures: int = 0
+class HealthChecker:
+    """Thread-safe URL health checker.
+    Checks URLs via HTTP HEAD on a configurable interval.  Results are cached
+    for *cache_ttl* seconds.  When a check fails (timeout / network error) the
+    last cached result is returned with ``STALE`` status.  After three
+    consecutive failures a URL transitions to ``DOWN`` and the alert callback
+    fires (exactly once per DOWN episode).
+    """
+    def __init__(
+        self,
+        check_interval: float = 30.0,
+        cache_ttl: float = 60.0,
+        timeout: float = 5.0,
+        max_workers: int = 10,
+        alert_callback: Optional[Callable[[URLCheckResult], None]] = None,
+    ):
+        self._check_interval = check_interval
+        self._cache_ttl = cache_ttl
+        self._timeout = timeout
+        self._max_workers = max_workers
+        self._alert_callback = alert_callback
+        self._urls: Set[str] = set()
+        self._results: Dict[str, URLCheckResult] = {}
+        self._down_notified: Set[str] = set()
+        self._lock = threading.RLock()
+        self._running = False
+        self._check_thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._session: Optional[requests.Session] = None
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+    def add_url(self, url: str) -> None:
+        """Register a URL for monitoring (thread-safe, idempotent)."""
+        with self._lock:
+            if url not in self._urls:
+                self._urls.add(url)
+                self._results[url] = URLCheckResult(url=url, timestamp=0.0)
+    def remove_url(self, url: str) -> None:
+        """Unregister a URL (thread-safe, no-op if unknown)."""
+        with self._lock:
+            self._urls.discard(url)
+            self._results.pop(url, None)
+            self._down_notified.discard(url)
+    def get_status(self, url: str) -> Optional[URLCheckResult]:
+        """Return the latest result for *url*, or None if unknown."""
+        with self._lock:
+            return self._results.get(url)
+    def get_all_statuses(self) -> Dict[str, URLCheckResult]:
+        """Return a snapshot of every monitored URL's current result."""
+        with self._lock:
+            return {url: self._results[url] for url in self._urls}
+    def start(self) -> None:
+        """Launch the background check loop (no-op if already running)."""
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
+            self._session = requests.Session()
+            adapter = HTTPAdapter(
+                pool_connections=self._max_workers,
+                pool_maxsize=self._max_workers,
+                max_retries=0,
+            )
+            self._session.mount("https://", adapter)
+            self._session.mount("http://", adapter)
+            self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
+            self._check_thread = threading.Thread(
+                target=self._check_loop,
+                daemon=True,
+                name="HealthChecker",
+            )
+            self._check_thread.start()
+    def stop(self) -> None:
+        """Gracefully stop the check loop, wait for in-flight checks, and
+        release the connection pool and thread pool."""
+        with self._lock:
+            self._running = False
+        if self._check_thread is not None and self._check_thread.is_alive():
+            self._check_thread.join(timeout=self._check_interval + 10)
+        if self._executor is not None:
+            try:
+                self._executor.shutdown(wait=True, cancel_futures=True)
+            except TypeError:
+                self._executor.shutdown(wait=True)
+        if self._session is not None:
+            self._session.close()
+        with self._lock:
+            self._executor = None
+            self._session = None
+    # ------------------------------------------------------------------
+    # Internal – check loop
+    # ------------------------------------------------------------------
+    def _check_loop(self) -> None:
+        while True:
+            with self._lock:
+                if not self._running:
+                    return
+                urls = list(self._urls)
+            if urls:
+                self._check_all_urls(urls)
+            deadline = time.time() + self._check_interval
+            while time.time() < deadline:
+                with self._lock:
+                    if not self._running:
+                        return
+                time.sleep(min(1.0, deadline - time.time()))
+    # ------------------------------------------------------------------
+    # Internal – batch check orchestration
+    # ------------------------------------------------------------------
+    def _check_all_urls(self, urls: List[str]) -> None:
+        now = time.time()
+        to_check: List[str] = []
+        for url in urls:
+            with self._lock:
+                result = self._results.get(url)
+            if result is None or (now - result.timestamp) >= self._cache_ttl:
+                to_check.append(url)
+        if not to_check:
+            return
+        futures = {}
+        for url in to_check:
+            try:
+                future = self._executor.submit(self._check_single_url, url)
+                futures[future] = url
+            except RuntimeError:
+                return  # executor has been shut down
+        for future in as_completed(futures):
+            try:
+                url, result = future.result()
+                self._apply_result(url, result)
+            except Exception:
+                pass
+    # ------------------------------------------------------------------
+    # Internal – single-URL HTTP check
+    # ------------------------------------------------------------------
+    def _check_single_url(self, url: str) -> Tuple[str, URLCheckResult]:
+        start = time.time()
+        try:
+            response = self._session.head(
+                url,
+                timeout=self._timeout,
+                allow_redirects=True,
+            )
+            elapsed = time.time() - start
+            return url, URLCheckResult(
+                url=url,
+                status="UP",
+                status_code=response.status_code,
+                response_time=round(elapsed, 3),
+                timestamp=time.time(),
+                consecutive_failures=0,
+            )
+        except requests.exceptions.Timeout as e:
+            return self._stale_or_first_failure(url, f"Timeout: {e}")
+        except requests.exceptions.ConnectionError as e:
+            return self._stale_or_first_failure(url, f"Connection error: {e}")
+        except requests.exceptions.RequestException as e:
+            return self._stale_or_first_failure(url, f"Request error: {e}")
+        except Exception as e:
+            return self._stale_or_first_failure(url, f"Unexpected error: {e}")
+    def _stale_or_first_failure(
+        self, url: str, error: str
+    ) -> Tuple[str, URLCheckResult]:
+        with self._lock:
+            cached = self._results.get(url)
+        if cached is not None and cached.timestamp > 0:
+            # We have a previous (non-initial) result — return it as STALE.
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                status_code=cached.status_code,
+                response_time=cached.response_time,
+                error=error,
+                timestamp=cached.timestamp,
+                consecutive_failures=cached.consecutive_failures + 1,
+            )
+        else:
+            # First check ever failed — no cache to return.
+            return url, URLCheckResult(
+                url=url,
+                status="STALE",
+                error=error,
+                timestamp=time.time(),
+                consecutive_failures=1,
+            )
+    # ------------------------------------------------------------------
+    # Internal – state mutation
+    # ------------------------------------------------------------------
+    def _apply_result(self, url: str, result: URLCheckResult) -> None:
+        fire_alert = False
+        with self._lock:
+            if url not in self._urls:
+                return  # URL was removed while check was in-flight
+            if result.consecutive_failures >= 3:
+                result.status = "DOWN"
+                if url not in self._down_notified:
+                    self._down_notified.add(url)
+                    fire_alert = True
+            elif result.status == "UP":
+                self._down_notified.discard(url)
+            self._results[url] = result
+        if fire_alert and self._alert_callback:
+            try:
+                self._alert_callback(result)
+            except Exception:
+                pass
+# ======================================================================
+# Demo
+# ======================================================================
+if __name__ == "__main__":
+    def alert_handler(result: URLCheckResult) -> None:
+        ts = time.strftime("%H:%M:%S", time.localtime(result.timestamp))
+        print(f"\n{'=' * 60}")
+        print(f"  !! ALERT  [{ts}]  {result.url}  is  DOWN")
+        print(f"     Error  : {result.error}")
+        print(f"     Fails  : {result.consecutive_failures}")
+        print(f"{'=' * 60}\n")
+    checker = HealthChecker(
+        check_interval=4.0,
+        cache_ttl=6.0,
+        timeout=3.0,
+        max_workers=5,
+        alert_callback=alert_handler,
+    )
+    checker.add_url("https://httpbin.org/get")
+    checker.add_url("https://httpbin.org/status/200")
+    checker.add_url("https://invalid.example.invalid")    # DNS failure
+    checker.add_url("https://httpbin.org/status/500")     # server error but reachable
+    print("=" * 60)
+    print("  URL Health Checker — Demo")
+    print("=" * 60)
+    print(f"  interval = {checker._check_interval}s,  "
+          f"cache_ttl = {checker._cache_ttl}s,  "
+          f"timeout = {checker._timeout}s")
+    print("=" * 60)
+    checker.start()
+    try:
+        for i in range(8):
+            time.sleep(checker._check_interval)
+            print(f"\n--- snapshot {i + 1:2d}  [{time.strftime('%H:%M:%S')}] "
+                  f"{'-' * 35}")
+            for url, r in checker.get_all_statuses().items():
+                icon = {"UP": " OK", "DOWN": "  X", "STALE": "  ~", "UNCHECKED": "  ?"}
+                sc = f"HTTP {r.status_code}" if r.status_code else "-"
+                rt = f"{r.response_time:.3f}s" if r.response_time else "-"
+                err = (r.error or "")[:55]
+                print(f"  {icon.get(r.status, ' ??'):>3} {r.status:9} | "
+                      f"{sc:>8} | {rt:>8} | fails={r.consecutive_failures} | "
+                      f"{err}")
+        # ---- dynamic add ----
+        print("\n--- Adding  https://httpbin.org/status/503")
+        checker.add_url("https://httpbin.org/status/503")
+        time.sleep(checker._check_interval)
+        for url, r in checker.get_all_statuses().items():
+            print(f"       {r.status:9} | {url}")
+        # ---- dynamic remove ----
+        print("\n--- Removing https://invalid.example.invalid")
+        checker.remove_url("https://invalid.example.invalid")
+        time.sleep(checker._check_interval)
+        print(f"  URLs monitored: {len(checker.get_all_statuses())}")
+        print("\n--- Shutting down ---")
+    except KeyboardInterrupt:
+        print("\n  Interrupted.")
+    finally:
+        checker.stop()
+        print("  HealthChecker stopped.")
+    # Sanity-check that all resources have been released.
+    assert checker._executor is None, "executor not released"
+    assert checker._session is None, "session not released"
+    print("  Resource cleanup: OK")
+Thinking: Let me verify the code runs correctly.
+# Run health_checker demo to verify it works
+$ python3 /Users/linmac/health_checker.py
+============================================================
+  URL Health Checker — Demo
+============================================================
+  interval = 4.0s,  cache_ttl = 6.0s,  timeout = 3.0s
+============================================================
+--- snapshot  1  [22:24:44] -----------------------------------
+   OK UP        | HTTP 500 |   1.657s | fails=0 | 
+   OK UP        | HTTP 200 |   1.670s | fails=0 | 
+   OK UP        | HTTP 200 |   2.878s | fails=0 | 
+…
+Click to expand
+Thinking: The code runs successfully. Let me review a few things:
+1. The demo shows cache working - the UP URLs show cached response times across snapshots.
+2. The STALE mode works - the invalid URL shows STALE with incremented failures.
+3. After 3 failures, the alert fires and the status transitions to DOWN.
+4. Dynamic add/remove works.
+5. Clean shutdown with resource cleanup verification passes.
+However, I notice one issue: when a URL is DOWN and still failing, consecutive_failures keeps incrementing (4, 5, 6, 7...). This is because every cache expiry we check again, it fails, and we create a new STALE/DOWN result with incremented failures. The alert only fires once (when transitioning from non-DOWN to DOWN), which is correct. But the consecutive_failures growing unbounded might not be ideal.
+Actually, this is by design - it shows how long the URL has been consistently failing. The alert fires once (at 3 failures) and doesn't fire again. The consecutive_failures counter is informational. If the URL recovers, it resets to 0.
+But wait, looking at the output more carefully: after the DOWN transition (fails=3 to fails=7), the DOWN status persists and the failure counter keeps going. This is because on each check, the STALE result copies the previous consecutive_failures and increments it. Since the previous result is DOWN with consecutive_failures=3, the next STALE has 3+1=4, etc.
+This is actually useful information - it shows the cumulative failure count. But it also means that if the URL never recovers, the counter grows unbounded. That's OK for monitoring purposes.
+One potential issue: the _apply_result method sets result.status = "DOWN" when consecutive_failures >= 3. But the result might already be STALE from _build_stale_or_down. The code mutates the result's status from STALE to DOWN. This is correct behavior.
+Another observation: the _check_single_url method returns a URLCheckResult that might have status="STALE" from _build_stale_or_down. Then _apply_result changes it to DOWN if consecutive_failures >= 3. The result object in _results ends up with status=DOWN. This is fine.
+The code seems correct. Let me also verify that the lock is used correctly:
+1. add_url - lock ✓
+2. remove_url - lock ✓
+3. get_status - lock ✓
+4. get_all_statuses - lock ✓
+5. start - lock for initial setup ✓
+6. stop - lock for _running = False, and for cleanup assignments ✓
+7. _check_loop - lock when reading _urls and _running ✓
+8. _check_all_urls - lock when reading individual _results ✓
+9. _stale_or_first_failure - lock when reading cached result ✓
+10. _apply_result - lock for all state mutations ✓
+All shared state accesses are protected. Good.
+One thing I notice: in _check_all_urls, I read self._results.get(url) with the lock. Then I check if result is None or (now - result.timestamp) >= self._cache_ttl. The result reference is captured inside the lock, so it's safe. But I don't hold the lock during the check - the result might become stale. However, the worst case is we check a URL that just got a cached result updated. It's not a correctness issue, just a minor efficiency issue. The cache TTL check is approximate, which is fine for monitoring.
+The code looks solid. Let me let the user know it's complete.
+代码已生成并验证通过。运行结果摘要：
+- 4 个 URL 同时监控：httpbin (200/500)、无效域名
+- 缓存生效：UP 的 URL 在两次快照间复用了相同响应时间
+- STALE 模式：无效域名前两次失败显示 STALE，连续失败计数递增
+- DOWN 告警：第 3 次失败触发 alert_handler，状态切换为 DOWN，且仅告警一次
+- 动态增删：运行期间新增/移除 URL 正常
+- 资源释放：stop() 后 executor、session 均被回收，断言通过

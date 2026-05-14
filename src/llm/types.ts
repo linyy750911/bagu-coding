@@ -12,6 +12,7 @@ export interface Message {
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
+  reasoning_content?: string;
 }
 
 export interface ToolDefinition {
@@ -35,6 +36,7 @@ export interface Completion {
   role: 'assistant';
   content: string | null;
   tool_calls?: ToolCall[];
+  reasoning_content?: string;
 }
 
 export interface LLMResponse {

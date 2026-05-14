@@ -19,6 +19,8 @@ function createEngine(config: CodeBaguConfig): ConstraintEngine {
   ]);
 }
 
+const IGNORED_DIRS = new Set(['node_modules', '__pycache__', '.git', 'venv', '.venv', 'dist', 'build']);
+
 function collectFiles(inputPath: string): string[] {
   const stat = statSync(inputPath);
   if (stat.isFile()) return [inputPath];
@@ -27,6 +29,7 @@ function collectFiles(inputPath: string): string[] {
   const files: string[] = [];
   const entries = readdirSync(inputPath, { withFileTypes: true });
   for (const entry of entries) {
+    if (IGNORED_DIRS.has(entry.name)) continue;
     const full = join(inputPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...collectFiles(full));
@@ -42,7 +45,12 @@ export interface CheckOptions {
   strict: boolean;
 }
 
-export function runCheck(inputPath: string, config: CodeBaguConfig, options: CheckOptions): string {
+export interface CheckResult {
+  output: string;
+  exitCode: number;
+}
+
+export function runCheck(inputPath: string, config: CodeBaguConfig, options: CheckOptions): CheckResult {
   const engine = createEngine(config);
   const reporter = new Reporter();
   const files = collectFiles(inputPath);
@@ -63,16 +71,20 @@ export function runCheck(inputPath: string, config: CodeBaguConfig, options: Che
       results.push(reporter.text(result));
     }
 
-    if (!result.passed && options.strict) hasErrors = true;
+    if (!result.passed) hasErrors = true;
     if (options.strict) {
       const warnings = result.violations.filter(v => v.severity === 'warning');
       if (warnings.length > 0) hasErrors = true;
     }
   }
 
+  const exitCode = hasErrors ? 1 : 0;
+
   if (options.format === 'json') {
-    return results.join('\n');
+    const parsed = results.map(r => JSON.parse(r));
+    const payload = parsed.length === 1 ? parsed[0] : parsed;
+    return { output: JSON.stringify(payload, null, 2), exitCode };
   }
 
-  return results.join('\n\n');
+  return { output: results.join('\n\n'), exitCode };
 }
