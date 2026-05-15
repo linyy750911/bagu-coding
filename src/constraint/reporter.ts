@@ -29,6 +29,6 @@ export class Reporter {
         line: v.line,
         column: v.column,
       })),
-    }, null, 2);
+    });
   }
 }

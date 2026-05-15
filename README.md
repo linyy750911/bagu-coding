@@ -70,6 +70,41 @@
 
 ---
 
+## 支持语言
+
+- ✅ Python (`.py`)
+- ✅ TypeScript / JavaScript (`.ts` `.tsx` `.js` `.jsx` `.mjs` `.cjs`)
+- ✅ Go (`.go`)
+- ✅ Rust (`.rs`)
+- ✅ Java (`.java`)
+- ✅ Ruby (`.rb`)
+- ✅ SQL (`.sql`)
+- ✅ Shell / Bash / Zsh (`.sh` `.bash` `.zsh`)
+- ✅ C / C++ (`.c` `.cpp` `.cc` `.cxx` `.h` `.hpp`)
+
+多语言改造完成于 2026-05-15，原有 Python 规则 100% 兼容。
+
+> **🎯 八股自举进行中**
+> 工具本身的源码正在逐步遵守 Code Bagu 规范。
+> 已完成：`src/languages/registry.ts` ✅
+> 已完成：`src/constraint/engine.ts` ✅
+> 已完成：`src/config/loader.ts` ✅
+> 已完成：`src/agent/loop.ts` ✅
+> 已完成：`src/constraint/prompt.ts` ✅
+> 已完成：`src/index.ts` ✅
+> 已完成：`src/agent/tools.ts` ✅
+> 已完成：`src/cli/chat.ts` ✅
+> 已完成：`src/constraint/validator.ts` ✅
+> 已完成：`src/constraint/rules/topology.ts` ✅
+> 已完成：`src/constraint/rules/bagu.ts` ✅
+> 已完成：`src/constraint/rules/duality.ts` ✅
+> 已完成：`src/constraint/rules/format.ts` ✅
+> 已完成：`src/constraint/rules/empty-bagu.ts` ✅
+> 进行中：`src/cli/check.ts` / `src/cli/init.ts` / `src/agent/context.ts` / `src/agent/history.ts` / `src/agent/metrics.ts`
+> 目标：全部核心代码自举完成。
+
+---
+
 ## 双引擎流水线
 
 ```

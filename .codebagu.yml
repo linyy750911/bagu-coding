@@ -1,6 +1,7 @@
 version: "1.0"
-project: "test-project"
+project: "code_bagu"
 languages:
+  - typescript
   - python
 rules:
   tuopu_header: required
@@ -10,4 +11,4 @@ rules:
   format_consistency: required
 ci:
   strict: true
-  format: json
+  format: text

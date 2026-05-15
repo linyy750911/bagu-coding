@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0] - 2026-05-15
+
+### Added
+- **feat**: 多语言支持（11 种语言）
+  - 新增 `src/config/languages.ts` 语言注册表，定义 `LanguageProfile` 抽象
+  - 5 个约束规则全部参数化（topology / bagu / duality / format / empty-bagu）
+  - CLI `check` 按配置扩展名扫描文件，不再硬编码 `.py`
+  - chat 模式写入校验按文件后缀自动选择语言规则
+  - 配置加载支持向上遍历目录树查找 `.codebagu.yml`
+  - JSON 输出改为 JSONL 逐行格式
+  - `src/config/languages.ts` 率先八股自举，通过 Code Bagu 校验
+- **feat**: 八股自举启动 — `src/languages/registry.ts` 率先通过 Code Bagu 校验
+
+### Compatibility
+- 原有 50 个单元测试全部通过，零破坏
+
 ## [1.0.0] - 2026-05-14
 
 ### Added
