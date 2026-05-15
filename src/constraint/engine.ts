@@ -1,3 +1,40 @@
+/**
+ * ConstraintEngine — 约束规则引擎 (engine.ts)
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 拓扑图:
+ *   输入: RuleContext（文件路径、源码、语言）
+ *   输出: EngineResult（passed / violations）
+ *   数据流向:
+ *     RuleContext → 遍历规则列表 → 逐条 check → 收集 Violations → 判定 passed
+ *   修改风险点:
+ *     ⚠️ 第23行: severity 为 'off' 时规则被跳过，需确保调用方知悉
+ *   最近修改:
+ *     2026-05-15: 支持多语言，RuleContext 新增 language 字段
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ */
+
+// 破题：遍历所有约束规则，逐条检查源码合规性；不做 AST 解析或语义分析。
+// 承题：依赖 CodeBaguRule 接口。前置条件: rules 和 config 已初始化。
+// [起讲] 将配置 severity 映射为 ViolationSeverity，统一错误/警告判定标准
+// 入手：N/A
+
+// ==== 起股 ====
+// 取：RuleContext（filePath, source, language）
+// 验：config.rules 包含对应规则的 severity 配置
+
+// ==== 中股 ====
+// 算：遍历规则列表 → 调用 rule.check → 收集违规
+// 算：按 severity 分级映射（required→error, warn→warning）
+// 转：EngineResult 对象
+
+// ==== 后股 ====
+// ✓ 正路径：无 error 级违规 → passed = true
+// ✗ 降级路径：存在 error 级违规 → passed = false
+
+// ==== 束股 ====
+// 给出：EngineResult（passed, violations, filePath）
+// 留下：无副作用（纯计算，不修改外部状态）
+
 import { CodeBaguConfig, RuleSeverity } from '../config/types';
 import { CodeBaguRule, RuleContext, EngineResult, RuleViolation, ViolationSeverity } from './types';
 
@@ -6,6 +43,10 @@ function toSeverity(severity: RuleSeverity | undefined): ViolationSeverity {
   return 'warning';
 }
 
+// 破题：对单个文件执行全量规则检查；不做增量或缓存。
+// 承题：依赖 this.rules 和 this.config。前置条件: context 包含有效 source 和 language。
+// [起讲] 逐个调用规则的 check 方法，按配置 severity 分级汇总
+// 入手：N/A
 export class ConstraintEngine {
   private rules: CodeBaguRule[];
   private config: CodeBaguConfig;
