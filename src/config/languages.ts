@@ -133,6 +133,15 @@ export const LANGUAGE_PROFILES: Record<string, LanguageProfile> = {
     topologyStrategy: { type: 'docblock', start: '/**', end: '*/' },
     functionPattern: /(?:static|inline|virtual|extern|\s)*\s*\w+(?:<[^>]+>)?\s+\w+\s*\([^)]*\)(?:\s*const)?\s*\{/,
   },
+  dart: {
+    id: 'dart',
+    name: 'Dart',
+    extensions: ['.dart'],
+    lineComment: '//',
+    blockComment: { start: '/*', end: '*/' },
+    topologyStrategy: { type: 'docblock', start: '/**', end: '*/' },
+    functionPattern: /(?:void|Future|Widget|String|int|double|bool|dynamic|\w+)(?:<[^>]+>)?\s+\w+\s*\(/,
+  },
 };
 
 export function detectLanguage(filePath: string, configLanguages: string[]): string {
