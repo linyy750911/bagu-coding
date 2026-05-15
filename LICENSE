@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2026 老林 (linyy750911)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+【附加条款 / Additional Terms】
+
+1. 使用本规范或工具生成代码，鼓励。
+   Using this protocol or tool to generate code is encouraged.
+
+2. 冒名声称原创、删除作者署名后重新发布，禁止。
+   Claiming original authorship or removing attribution before redistribution is prohibited.
+
+3. 衍生作品请保留原始作者声明链接。
+   Derivative works must retain a link to the original author statement.
+
+---
+
+> **Code Bagu（代码八股）** 由老林首创。
+> 老林从事智慧体育设备行业，非职业程序员。
+> 灵感来自父亲教语文写诗时对格式的严格追求。
+> 2026-05-14 发布首个带监控数据的对比实验报告。
