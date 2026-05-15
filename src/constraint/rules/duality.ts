@@ -101,6 +101,10 @@ export class DualityRule implements CodeBaguRule {
 
     const commentSource = commentLines.join('\n');
 
+    // 关键判断：文件中是否有函数体（通过八股的"起股"标记判断）
+    // 纯常量类、接口、枚举等通常没有函数，因此不需要强制降级路径
+    const hasFunctionBody = /====\s*起股\s*====/.test(commentSource);
+
     for (const pair of PAIRS) {
       const openCount = (commentSource.match(new RegExp(escapeRegex(pair.open), 'g')) || []).length;
       const closeCount = (commentSource.match(new RegExp(escapeRegex(pair.close), 'g')) || []).length;
@@ -120,12 +124,9 @@ export class DualityRule implements CodeBaguRule {
             severity: 'error',
             message: `[${filePath}] 对偶不平衡 - ${pair.label}: 缺少 ${pair.open}（正路径），至少要有 1 个`,
           });
-        } else if (closeCount === 0) {
-          violations.push({
-            ruleId: this.id,
-            severity: 'error',
-            message: `[${filePath}] 对偶不平衡 - ${pair.label}: 缺少 ${pair.close}（降级路径），至少要有 1 个`,
-          });
+        } else if (!hasFunctionBody && closeCount === 0) {
+          // 无函数体文件（如纯常量类）：有正路径声明即可，不强制降级路径
+          continue;
         } else if (closeCount < openCount) {
           violations.push({
             ruleId: this.id,
