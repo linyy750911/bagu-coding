@@ -1,0 +1,1387 @@
+# PROJECT_MAP — BaguRAG 精简项目地图
+
+> 本文件由 `tools/extract_project_map.py` 自动生成，用于新会话快速定位代码。
+> 生成时间: 2026-05-15
+
+## 前端: athlete-master (Flutter/Dart)
+
+- **项目路径**: `athlete-master/`
+- **Flutter版本**: 3.41.7
+- **总文档数**: 129
+
+### controller
+- **home_controller.dart** (`lib/app/controller/home_controller.dart`)
+  - **HomeController**
+    - `onInit() [推断]`初始化 GetX 控制器，加载本地持久化配置并设置响应式监听器 — `void onInit() async {`
+    - `canRestartApp() [推断]`判断当前是否允许重启应用 — `bool canRestartApp() {`
+    - `getSportNameFromSportId() [推断]`根据运动 ID 查询运动名称 — `String getSportNameFromSportId({required String sportId}) {`
+    - `changeSystemVolume() [推断]`调整系统播放音量 — `void changeSystemVolume({double value = 1.0}) async {`
+    - `startVolumeTimer() [推断]`启动音量自动恢复定时器 — `void startVolumeTimer() {`
+    - `stopVolumeTimer() [推断]`停止音量恢复定时器 — `void stopVolumeTimer() {`
+    - `calculateMD5() [推断]`计算文件的 MD5 哈希值，用于文件完整性校验 — `Future<String> calculateMD5(File file) async {`
+    - `configLoadingTheme() [推断]`configLoadingTheme 方法处理 — `void configLoadingTheme() {`
+    - `configTTS() [推断]`configTTS 方法处理 — `void configTTS(bool enable) {`
+    - `configShowFace() [推断]`configShowFace 方法处理 — `void configShowFace(bool enable) {`
+    - `configScreen() [推断]`configScreen 方法处理 — `void configScreen(int mCloseScreenTime, bool timeControl) {`
+    - `configDashVisitor() [推断]`configDashVisitor 方法处理 — `void configDashVisitor(bool mOpenDashVisitor) {`
+    - `configRunningStartGun() [推断]`configRunningStartGun 方法处理 — `void configRunningStartGun(bool mOpenRunningStartGun) {`
+    - `configLivingBodyValidate() [推断]`configLivingBodyValidate 方法处理 — `void configLivingBodyValidate(bool enable) {`
+    - `configLockScreen() [推断]`configLockScreen 方法处理 — `void configLockScreen(bool enable, {String message = "设备已锁定"}) {`
+    - `showVersion() [推断]`显示当前 APP 版本信息 — `void showVersion() async {`
+    - `keepCameraOn() [推断]`保持摄像头持续开启，防止休眠 — `void keepCameraOn() {`
+    - `getDeviceSN() [推断]`获取设备唯一序列号(SN) — `String getDeviceSN() {`
+    - `getIp() [推断]`获取本机 IP 地址 — `String getIp() {`
+    - `connectSocket() [推断]`connectSocket 方法处理 — `Future<void> connectSocket() async {`
+    - `refreshLogo() [推断]`刷新 Logo 图片，从后端下载并缓存到本地 — `refreshLogo() async {`
+    - `getRecheckConfig() [推断]`获取重测配置，判断是否允许重复测试 — `Future<bool> getRecheckConfig() async {`
+    - `goHome() [推断]`切换运动项目后查询详情配置并返回首页 — `void goHome() async {`
+    - `getCurrentSportConfig() [推断]`获取当前运动项目的详细配置，优先本地缓存回源 — `void getCurrentSportConfig() async {`
+    - `changeSwitchSport() [推断]`切换当前运动项目，更新 UI 状态 — `void changeSwitchSport() {`
+    - `rebootPanel() [推断]`重启面板机硬件 — `void rebootPanel() {`
+    - `restartApk() [推断]`重启当前 APP 进程 — `void restartApk() {`
+    - `toCheckIn() [推断]`跳转签到页面，根据模式选择不同签到流程 — `toCheckIn(CheckInModeEnum mode, {String target = "sport"}) async {`
+    - `toOneToMoreSkipCheckInPage() [推断]`跳转一对多免签到页面 — `void toOneToMoreSkipCheckInPage(int index) async {`
+    - `toDashCheckInPage() [推断]`跳转短跑检录页面 — `void toDashCheckInPage(int index) async {`
+    - `toLdrCheckInPage() [推断]`跳转长跑检录页面 — `void toLdrCheckInPage(int index) async {`
+    - `cancelCheckIn() [推断]`取消当前签到流程，清理临时用户数据 — `void cancelCheckIn() {`
+    - `getUserBusinessId() [推断]`查询用户的业务系统 ID — `Future<bool> getUserBusinessId(String userCode) async {`
+    - `validateCheckIn() [推断]`校验签到用户信息合法性 — `validateCheckIn(CheckInUser checkInUser) async {`
+    - `calcChecksum() [推断]`计算字节数组校验和（简单累加和） — `List<int> calcChecksum(List<int> data) {`
+    - `hexStringToBytes() [推断]`十六进制字符串转为字节数组 — `List<int> hexStringToBytes(String hex) {`
+    - `toByte() [推断]`单个十六进制字符对转为字节值 — `int toByte(String hex) {`
+    - `initHealthVital() [推断]`初始化健康/肺活量设备连接 — `bool initHealthVital() {`
+    - `showVitalCapacityResult() [推断]`展示肺活量测试结果页面 — `showVitalCapacityResult(dynamic data) async {`
+    - `isNewHistoryScorePage() [推断]`判断是否应使用新版历史成绩页面 — `bool isNewHistoryScorePage() {`
+    - `_isNewHistorySports() [推断]`判断指定运动是否支持新版历史成绩展示 — `bool _isNewHistorySports() {`
+    - `checkConnect() [推断]`检查 WebSocket 连接状态，当前仅记录日志。[阻塞点] — `void checkConnect() {`
+    - `addToDashGroup() [推断]`将用户添加到短跑检录分组。[并发关联] — `addToDashGroup(TestUser user) async {`
+    - `addToLDRGroup() [推断]`将用户添加到长跑检录分组。[并发关联] — `addToLDRGroup(TestUser user) async {`
+    - `processMessage() [推断]`处理 WebSocket 推送的实时事件消息，驱动运动状态机流转。[并发核心] — `void processMessage(dynamic message) async {`
+    - `_handleEventCodeNull() [推断]`处理有效动作事件(eventCode 为空)，更新完成计数并记录动作详情 — `void _handleEventCodeNull(ProgressEvent event, EventPacket packet) {`
+    - `_handleEventCodeNotNull() [推断]`处理无效/错误动作事件(eventCode 非空)，更新计数并播放错误提示音 — `void _handleEventCodeNotNull(ProgressEvent event, EventPacket packet) {`
+    - `syncTimeFromServer() [推断]`从服务器同步时间到面板机原生层 — `Future<void> syncTimeFromServer() async {`
+    - `restartCountdownForRunning() [推断]`restartCountdownForRunning 重启运动流程，重置后重新发令。[并发关联] — `void restartCountdownForRunning() async {`
+    - `startForQuality() [推断]`startForQuality 启动/发令操作，触发设备开始采集。[并发关联] — `void startForQuality() async {`
+    - `restartForLdr() [推断]`restartForLdr 重启运动流程，重置后重新发令。[并发关联] — `void restartForLdr() {`
+    - `readyForDash() [推断]`readyForDash 运动预备阶段，组装参数发送预备请求。[并发关联] — `void readyForDash() async {`
+    - `startSkipOneToMore() [推断]`启动一对多免签到运动流程 — `startSkipOneToMore() {`
+    - `startDash() [推断]`启动短跑运动流程，支持重启和延迟发令 — `startDash({bool restart = false, bool mDelayClickTwo = false}) async {`
+    - `delayStartSkipOneToMore() [推断]`延迟启动一对多免签到运动，防止误触 — `delayStartSkipOneToMore({bool restart = false, bool mDelayClickTwo = false}) {`
+    - `playDelayGoVoice() [推断]`playDelayGoVoice 方法处理 — `Future<void> playDelayGoVoice(String delayGoTime) async {`
+    - `runningGo() [推断]`runningGo 方法处理 — `void runningGo() {`
+    - `restartForDash() [推断]`restartForDash 重启运动流程，重置后重新发令。[并发关联] — `void restartForDash() {`
+    - `doStartForBasketballTurnstile() [推断]`doStartForBasketballTurnstile 方法处理 — `void doStartForBasketballTurnstile() async {`
+    - `falseStart() [推断]`抢跑处理，关闭页面并重置 started 状态 — `bool falseStart() {`
+    - `startBasketballTurnstile() [推断]`启动篮球绕杆运动发令流程 — `startBasketballTurnstile() async {`
+    - `startBasketballDribbleTurnstile() [推断]`启动篮球运球绕杆运动发令流程 — `startBasketballDribbleTurnstile() async {`
+    - `startBasketballShoot() [推断]`启动篮球投篮运动发令流程 — `startBasketballShoot() async {`
+    - `stopQualityConfirm() [推断]`stopQualityConfirm 停止运动任务，HTTP 通知后端结束。[并发关联] — `void stopQualityConfirm() {`
+    - `doStopForQuality() [推断]`doStopForQuality 方法处理 — `void doStopForQuality() async {`
+    - `stopForQuality() [推断]`stopForQuality 停止运动任务，HTTP 通知后端结束。[并发关联] — `void stopForQuality() async {`
+    - `stopLdrConfirm() [推断]`stopLdrConfirm 停止运动任务，HTTP 通知后端结束。[并发关联] — `void stopLdrConfirm() async {`
+    - `stopDashConfirm() [推断]`stopDashConfirm 停止运动任务，HTTP 通知后端结束。[并发关联] — `void stopDashConfirm() {`
+    - `taskListCheck() [推断]`检查当前是否存在进行中的任务，有则执行回调。[并发关联] — `void taskListCheck({required Function() haveTaskIdFun}) {`
+    - `doStopRunning() [推断]`doStopRunning 方法处理 — `void doStopRunning() async {`
+    - `finishDash() [推断]`finishDash 运动正常结束，清理分组并返回首页 — `void finishDash() async {`
+    - `resetQueryCondition() [推断]`resetQueryCondition 重置页面/运动状态，清理定时器和数据。[状态单值] — `void resetQueryCondition() {`
+    - `resetForQuality() [推断]`resetForQuality 重置页面/运动状态，清理定时器和数据。[状态单值] — `void resetForQuality() async {`
+    - `resetRunningState() [推断]`resetRunningState 重置页面/运动状态，清理定时器和数据。[状态单值] — `void resetRunningState() async {`
+    - `resetCountdownForShowResult() [推断]`resetCountdownForShowResult 重置页面/运动状态，清理定时器和数据。[状态单值] — `resetCountdownForShowResult() {`
+    - `resetQualityState() [推断]`resetQualityState 重置页面/运动状态，清理定时器和数据。[状态单值] — `void resetQualityState() async {`
+    - `startTimer() [推断]`startTimer 启动/发令操作，触发设备开始采集。[并发关联] — `void startTimer({bool recordingTime = false}) async {`
+    - `stopSportTimer() [推断]`stopSportTimer 停止运动任务，HTTP 通知后端结束。[并发关联] — `void stopSportTimer() {`
+    - `startBringBackTimer() [推断]`startBringBackTimer 启动/发令操作，触发设备开始采集。[并发关联] — `void startBringBackTimer() async {`
+    - `goWebViewShow() [推断]`跳转 WebView 展示页面 — `void goWebViewShow() {`
+    - `cancelBringBackTimer() [推断]`cancelBringBackTimer 取消定时器/倒计时，防止回调触发 — `void cancelBringBackTimer() async {`
+    - `startCountdownToHome() [推断]`startCountdownToHome 启动/发令操作，触发设备开始采集。[并发关联] — `void startCountdownToHome({int duration = 3}) {`
+    - `cancelHomeCountdown() [推断]`cancelHomeCountdown 取消定时器/倒计时，防止回调触发 — `void cancelHomeCountdown() {`
+    - `upUserGroup() [推断]`更新分组中指定索引位置的用户信息 — `void upUserGroup(int index, TestUser value) {`
+    - `toRemedialPage() [推断]`跳转补录成绩页面，查询待补录名单 — `void toRemedialPage() async {`
+    - `exitLdr() [推断]`退出长跑页面，清理状态并返回 — `void exitLdr() {`
+    - `requestStopLdr() [推断]`请求停止长跑任务 — `void requestStopLdr() async {`
+    - `confirmSubmitRemedial() [推断]`confirmSubmitRemedial 方法处理 — `void confirmSubmitRemedial() async {`
+    - `doRemedial() [推断]`doRemedial 方法处理 — `void doRemedial() async {`
+    - `submitRemedial() [推断]`提交补录成绩到后端。[并发关联] — `void submitRemedial() async {`
+    - `doScoreResult() [推断]`处理成绩列表，格式化并展示最终成绩 — `void doScoreResult(List<ScoreList> scoreList) async {`
+    - `clearLdrState() [推断]`清理长跑相关状态 — `void clearLdrState() async {`
+    - `startCountdown() [推断]`startCountdown 启动/发令操作，触发设备开始采集。[并发关联] — `void startCountdown({Function? whenFinished, int duration = 15}) async {`
+    - `cancelCountdown() [推断]`cancelCountdown 取消定时器/倒计时，防止回调触发 — `void cancelCountdown() {`
+    - `backFromResult() [推断]`从成绩结果页返回上一页 — `backFromResult() {`
+    - `onChartScroll() [推断]`成绩图表滚动监听，动态加载更多数据 — `void onChartScroll(double v) async {`
+    - `backFromProgressForQuality() [推断]`从素质类成绩进度页返回 — `void backFromProgressForQuality() async {`
+    - `getScoreOfToday() [推断]`查询今日成绩列表 — `void getScoreOfToday() async {`
+    - `getScoreOfHistory() [推断]`查询历史成绩列表，支持条件筛选 — `Future<void> getScoreOfHistory() async {}`
+    - `processScore() [推断]`处理原始成绩数据，格式化并分类 — `void processScore(List<HistoryScoreModel> temp) {`
+    - `doProcessScoreForShow() [推断]`格式化单条成绩用于页面展示 — `void doProcessScoreForShow(HistoryScoreModel element) {`
+    - `doProcessScore() [推断]`处理单条成绩的完整逻辑（含校验和转换） — `void doProcessScore(HistoryScoreModel element) {`
+    - `takePicture() [推断]`触发摄像头拍照 — `void takePicture() async {`
+    - `submit() [推断]`通用提交入口，分发到具体提交逻辑 — `void submit() async {`
+    - `resetPicture() [推断]`resetPicture 重置页面/运动状态，清理定时器和数据。[状态单值] — `void resetPicture() {`
+    - `changeVolume() [推断]`调整播放器音量（UI 滑块回调） — `void changeVolume(double v) async {`
+    - `changeDebug() [推断]`切换调试模式开关 — `void changeDebug(bool debug) {`
+    - `pickVideo() [推断]`选择本地视频文件 — `Future<String> pickVideo() async {`
+    - `resetCountdownForScore() [推断]`重置成绩页倒计时 — `resetCountdownForScore({int duration = 15}) {`
+    - `formatScore() [推断]`格式化成绩字符串，统一单位和精度 — `String formatScore(String score) {`
+    - `showHealthResult() [推断]`展示健康测试结果页面 — `showHealthResult(dynamic data) async {`
+    - `submitScore() [推断]`提交成绩到后端确认 — `void submitScore() async {`
+    - `pushRemote() [推断]`HTTP POST 推送实时事件到第三方远程 URL。[并发关联] — `void pushRemote(EventPacket message, dynamic rawMsg) async {`
+    - `cancelAllTimer() [推断]`一键取消所有定时器，彻底清理计时资源 — `cancelAllTimer() {`
+    - `exitExam() [推断]`退出考试模式，返回普通训练模式 — `void exitExam() async {`
+    - `backHome() [推断]`强制返回首页，清理导航栈 — `void backHome() {`
+    - `showTimeOutTip() [推断]`显示操作超时提示 — `void showTimeOutTip() {`
+    - `doFaceRecognition() [推断]`执行人脸识别比对 — `Future<bool> doFaceRecognition(Uint8List image) async {`
+    - `recoSuccess() [推断]`人脸识别成功回调，更新当前用户 — `recoSuccess(String uid, String username) {`
+    - `dispose() [推断]`额外释放自定义监听器和 Stream 资源 — `void dispose() {`
+    - `onClose() [推断]`释放 GetX 控制器生命周期资源，关闭所有长连接和定时器 — `void onClose() {`
+    - `updateFaceBoundingBox() [推断]`更新人脸检测框位置 — `void updateFaceBoundingBox(List<Face> faces) {`
+
+### other
+- **main.dart** (`lib/main.dart`)
+  - **MyApp** — 构建训练站面板机的根 Widget
+    - `main()`初始化面板机所有基础服务并启动 Flutter 应用 — `void main() async {`
+    - `initService()`初始化所有业务依赖服务 — `initService() async {`
+
+### service
+- **face_detector_service.dart** (`lib/app/service/face_detector_service.dart`)
+  - **FaceDetectionAndCropping** — 提供人脸检测与裁剪的统一入口
+    - `faceDetectionIsolate() [推断]`在独立 Isolate 中执行人脸检测 — `void faceDetectionIsolate((SendPort, RootIsolateToken) arguments) async {`
+    - `imageProcessingIsolate() [推断]`在独立 Isolate 中执行图像预处理 — `void imageProcessingIsolate((SendPort, RootIsolateToken) arguments) async {`
+    - `faceCroppingIsolate() [推断]`在独立 Isolate 中执行人脸裁剪 — `void faceCroppingIsolate((SendPort, RootIsolateToken) arguments) async {`
+    - `dispose() [推断]`释放人脸检测相关资源 — `void dispose() {`
+
+### ui
+- **custom_keyboard.dart** (`lib/app/ui/android/widgets/keyboard/lib/src/custom_keyboard.dart`)
+  - **CustomKeyboard**
+    - `initState() [推断]`初始化键盘状态并监听控制器变化 — `void initState() {`
+
+
+---
+
+## 后端: training-station (Java Spring Boot)
+
+- **项目路径**: `training-station/`
+- **Spring Boot版本**: 3.2.15
+- **Jar路径**: `/home/trainingstation/data/app/ts-entrypoint.jar`
+- **总文档数(精简后)**: 899
+
+### ts-entrypoint
+- **AppRun.java** (`ts-entrypoint/src/main/java/com/megvii/trainingstation/AppRun.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `main() [推断]`程序主入口
+- **TestAddPerson.java** (`ts-entrypoint/src/test/java/com/megvii/trainingstation/TestAddPerson.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `main() [推断]`程序主入口
+    - `testSavePerson() [推断]`执行testSavePerson操作
+    - `writeLog() [推断]`执行writeLog操作
+    - `imageToBase64Str() [推断]`执行imageToBase64Str操作
+- **TestDeletePerson.java** (`ts-entrypoint/src/test/java/com/megvii/trainingstation/TestDeletePerson.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `testDeletePerson() [推断]`执行testDeletePerson操作
+    - `testDeleteSinglePerson() [推断]`执行testDeleteSinglePerson操作
+- **TestDevicepi.java** (`ts-entrypoint/src/test/java/com/megvii/trainingstation/TestDevicepi.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `testPutDeviceTime() [推断]`执行testPutDeviceTime操作
+    - `testB4hAddVideo() [推断]`执行testB4hAddVideo操作
+- **TestInsomniaToPostManUtils.java** (`ts-entrypoint/src/test/java/com/megvii/trainingstation/TestInsomniaToPostManUtils.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `convert() [推断]`执行convert操作
+- **TestMsgQueueOverstock.java** (`ts-entrypoint/src/test/java/com/megvii/trainingstation/TestMsgQueueOverstock.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `testSend() [推断]`执行testSend操作
+- **TestSendMsg.java** (`ts-entrypoint/src/test/java/com/megvii/trainingstation/TestSendMsg.java`)
+  - **global** — 提供 [vendor] 相关工具方法
+    - `asynSendMsg() [推断]`执行asynSendMsg操作
+
+### ts-training
+- **ExecutorConfig.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/config/ExecutorConfig.java`)
+  - **global** — 提供 training 相关工具方法
+    - `aiboxServicePlaceholder() [推断]`执行aiboxServicePlaceholder操作
+    - `trainingServiceExecutor() [推断]`执行trainingServiceExecutor操作
+    - `iDentityServiceExecutor() [推断]`执行iDentityServiceExecutor操作
+    - `countdownServiceExecutor() [推断]`计数downServiceExecutor
+    - `runningServiceExecutor() [推断]`运行ningServiceExecutor
+    - `thirdPartyPullExecutor() [推断]`执行thirdPartyPullExecutor操作
+    - `aiDriveServiceExecutor() [推断]`执行aiDriveServiceExecutor操作
+    - `traceIdExecutorService() [推断]`追踪idExecutorService
+- **TrainingConfig.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/config/TrainingConfig.java`)
+  - **global** — 提供 training 相关工具方法
+    - `method() [推断]`执行TrainingConfig操作
+- **TrainingModuleInitializeImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/config/TrainingModuleInitializeImpl.java`)
+  - **global** — 提供 training 相关工具方法
+    - `run() [推断]`执行线程/任务逻辑
+    - `extractZip() [推断]`提取zip
+    - `copyFilesRecursively() [推断]`执行文件读写/复制/移动/删除/上传/下载 — `public static void copyFilesRecursively(Path sourceDir) {`
+    - `visitFile() [推断]`执行visitFile操作
+- **VisiableThreadPoolTaskExecutor.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/config/VisiableThreadPoolTaskExecutor.java`)
+  - **global** — 提供 training 相关工具方法
+    - `showThreadPoolInfo() [模板]`提供 training 相关工具方法 — `private void showThreadPoolInfo(String prefix) {`
+    - `execute() [推断]`执行业务逻辑
+    - `method() [推断]`执行method操作
+- **B4H3XTestController.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/controller/B4H3XTestController.java`)
+  - **global** — 提供 training 相关工具方法
+    - `testLogin() [推断]`测试login
+    - `testRregistration() [推断]`测试rregistration
+    - `testFacetotal() [推断]`测试facetotal
+    - `addPerson() [推断]`添加person
+    - `deletePerson() [推断]`删除person
+    - `addFaceGroup() [推断]`添加faceGroup
+    - `bindFaceGroup() [推断]`绑定faceGroup
+    - `method() [推断]`执行内部方法
+- **RawDataController.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/controller/RawDataController.java`)
+  - **global** — 提供 training 相关工具方法
+    - `recvRawData2() [推断]`接收原始数据2
+    - `recvTroubleshootingRawDataB4h() [推断]`接收故障排查数据rawDataB4h
+    - `recvTroubleshootingRawDataB4x() [推断]`接收故障排查数据rawDataB4x
+    - `recvRawDataB4x() [推断]`接收原始数据b4x
+    - `recvRawData() [推断]`接收原始数据
+    - `recvRawDataRound() [推断]`接收原始数据round
+    - `recvRawDataByPandora() [推断]`接收原始数据byPandora
+    - `method() [推断]`执行内部方法
+    - `run() [推断]`执行线程/任务逻辑
+- **TrainingController.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/controller/TrainingController.java`)
+  - **global** — 提供 training 相关工具方法
+    - `method() [人工]`构造训练控制器实例并注入配置模块
+    - `getConfiguration() [人工]`获取configuration值
+    - `getCurrentConfig() [人工]`获取currentConfig值
+    - `getCurrentStatus() [人工]`获取currentStatus值
+    - `refreshTaskConfig() [人工]`刷新训练任务配置缓存
+    - `taskRemoteControl() [人工]`接收训练任务远程控制请求并分发指令
+    - `taskRemoteControlGo() [人工]`下发训练任务启动指令到终端设备
+    - `taskRemoteControlStop() [人工]`下发训练任务停止指令到终端设备
+    - `configSport() [人工]`配置运动项目ROI参数
+    - `saveSportROI() [人工]`保存运动项目ROI区域配置
+    - `deleteSportROI() [人工]`删除运动项目ROI区域配置
+    - `getAIServerROI() [人工]`获取aIServerROI值
+    - `getAIServerLine() [人工]`获取aIServerLine值
+    - `saveAIServerROI() [人工]`保存AI服务器ROI区域配置
+    - `getSnapFullImage() [人工]`获取snapFullImage值
+    - `debugForMe() [人工]`下发调试指令到训练设备
+    - `taskRemoteForward() [人工]`转发训练任务控制指令到目标设备
+    - `getRuningTaskCount() [人工]`获取runingTaskCount值
+    - `getRuningTaskList() [人工]`获取runingTaskList值
+    - `startBasicTaskForInternal() [人工]`启动基础训练任务流程
+    - `readyBasicNotificationForInternal() [人工]`发送基础训练任务就绪通知
+    - `goBasicNotificationForInternal() [人工]`发送基础训练任务开始执行通知
+    - `stopBasicTaskForInternal() [人工]`停止基础训练任务流程
+    - `startRunTaskForInternal() [人工]`启动跑步训练任务流程
+    - `readyToRunForInternal() [人工]`发送跑步任务就绪通知
+    - `goRunNotificationForInternal() [人工]`发送跑步任务开始执行通知
+    - `runTaskMissingForInternal() [人工]`处理跑步任务异常中断
+    - `stopRunTaskForInternal() [人工]`停止跑步训练任务流程
+    - `startTaskForPartner() [人工]`向合作伙伴下发任务启动指令
+    - `runNotificationForPartner() [人工]`向合作伙伴发送任务执行通知
+    - `getTaskMissingForPartner() [人工]`获取taskMissingForPartner值
+    - `stopTaskForPartner() [人工]`向合作伙伴下发任务停止指令
+    - `setTrainingMode() [人工]`设置trainingMode值
+    - `forwardHttpService() [人工]`转发HTTP服务请求到下游服务
+    - `checkinBasicTaskForInternal() [人工]`执行参数/状态/格式校验
+    - `checkinRunTaskForInternal() [人工]`执行参数/状态/格式校验
+    - `getSaveSportROI() [人工]`获取saveSportROI值
+    - `loadRoi() [人工]`加载ROI区域配置信息
+    - `deleteRoi() [人工]`删除ROI区域配置信息
+- **DebugMockWorker.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/jobx/DebugMockWorker.java`)
+  - **global** — 提供 training 相关工具方法
+    - `method() [推断]`执行DebugMockWorker操作
+    - `run() [推断]`执行线程/任务逻辑
+- **RoundChannelPoleMaster.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/jobx/RoundChannelPoleMaster.java`)
+  - **global** — 提供 training 相关工具方法
+    - `method() [推断]`执行RoundChannelPoleMaster操作
+- **TrainingService.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/TrainingService.java`)
+  - **global** — 提供 training 相关工具方法
+    - `callFaceRecognizion() [推断]`执行callFaceRecognizion操作
+    - `callFaceRecognizionPath() [推断]`执行callFaceRecognizionPath操作
+    - `buildRoundDataReport() [推断]`构建轮次数据报告
+    - `insertActionEventCard() [推断]`插入动作事件卡片
+    - `buildActionStageCard() [推断]`构建actionStageCard
+- **AthleteSportROIServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/AthleteSportROIServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getAthleteSportROITemplate() [推断]`获取athleteSportROITemplate值
+    - `method() [推断]`执行method操作
+    - `autoSwitchSport() [推断]`执行autoSwitchSport操作
+    - `getSportRAreaSize() [推断]`获取sportRAreaSize值
+    - `getSportAlgoKey() [推断]`获取sportAlgoKey值
+- **ForwardPluginServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/ForwardPluginServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `before() [推断]`前置处理逻辑
+    - `execute() [推断]`执行业务逻辑
+    - `after() [推断]`后置处理逻辑
+- **RawDataPluginServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/RawDataPluginServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `divide() [推断]`执行divide操作
+    - `pickThrow() [推断]`执行pickThrow操作
+    - `cacheMark() [推断]`执行 Redis 缓存读写/过期/删除操作 — `public void cacheMark(String type, AIBoxRawData aiBoxRawData) {`
+- **SportRoiLineServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/SportRoiLineServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+- **SportServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/SportServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `go() [推断]`启动执行流程
+    - `create() [推断]`创建新实例或记录
+    - `stop() [推断]`停止当前运行流程
+    - `beforeKill() [推断]`终止前预处理
+    - `kill() [推断]`强制终止任务或进程
+    - `afterKill() [推断]`终止后清理
+    - `rego() [推断]`重新进入就绪态
+    - `ready() [推断]`标记对象就绪状态
+    - `compute() [推断]`执行计算逻辑
+    - `history() [推断]`获取历史记录
+    - `afterCreate() [推断]`创建后回调
+    - `autoReady() [推断]`自动标记就绪
+    - `beforeReady() [推断]`就绪前初始化
+    - `afterReady() [推断]`执行afterReady操作
+- **SportSuggestionServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/SportSuggestionServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `getSportSuggestionTemplate() [推断]`获取sportSuggestionTemplate值
+- **StationConfigServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/StationConfigServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `getStationConfigTemplate() [推断]`获取stationConfigTemplate值
+- **ThreadPoolServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/ThreadPoolServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `alignTask() [推断]`执行alignTask操作
+    - `countdownTask() [推断]`执行countdownTask操作
+    - `callTrainingTaskWorker() [推断]`执行callTrainingTaskWorker操作
+    - `call() [推断]`执行call操作
+    - `callRunningTaskWorker() [推断]`执行callRunningTaskWorker操作
+    - `openAlgorithm() [推断]`开启算法分析功能
+    - `delayAddToQueue() [推断]`执行delayAddToQueue操作
+    - `doSwitchImageAndMaxflow() [推断]`执行doSwitchImageAndMaxflow操作
+- **TrainingServiceImpl.java** (`ts-training/src/main/java/com/megvii/trainingstation/training/service/impl/TrainingServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `switchB4HAlgorithm() [推断]`执行switchB4HAlgorithm操作
+    - `buildTrainingEventDataReport() [推断]`构建trainingEventDataReport
+    - `buildTrainingScoreDataReport() [推断]`构建trainingScoreDataReport
+    - `buildTrainingInitialDataReport() [推断]`构建trainingInitialDataReport
+    - `switchB4HBackgroundImage() [推断]`执行switchB4HBackgroundImage操作
+    - `startVideoPlayback() [推断]`启动视频回放
+    - `buildRoundDataReport() [推断]`构建轮次数据报告
+    - `method() [推断]`执行method操作
+    - `getCommonRawActionResult() [推断]`获取commonRawActionResult值
+    - `getCommonRawSkeletonSignal() [推断]`获取commonRawSkeletonSignal值
+    - `buildActionStageCard() [推断]`构建actionStageCard
+    - `buildEvaluationReport() [推断]`构建evaluationReport
+    - `buildEvaluationReportMultiLane() [推断]`构建evaluationReportMultiLane
+    - `insertActionEventCard() [推断]`插入动作事件卡片
+    - `switchSport() [推断]`执行switchSport操作
+    - `saveSportROI() [推断]`保存sportROI数据
+    - `getSportROI() [推断]`获取sportROI值
+    - `getAIServerSportROI() [推断]`获取aIServerSportROI值
+    - `saveAIServerSportROI() [推断]`保存aIServerSportROI数据
+    - `deleteSportROI() [推断]`删除sportROI记录
+    - `saveTrainingStationConfigs() [推断]`保存trainingStationConfigs数据
+    - `callFaceRecognizion() [推断]`执行callFaceRecognizion操作
+    - `callFaceRecognizionPath() [推断]`执行callFaceRecognizionPath操作
+    - `forwardHttpService() [推断]`执行forwardHttpService操作
+    - `refreshSportCache() [推断]`刷新运动项目缓存
+    - `refreshStationCache() [推断]`刷新stationCache缓存
+    - `customSingleSport() [推断]`执行customSingleSport操作
+    - `openAlgorithm() [推断]`开启算法分析功能
+    - `extracteROIConfig() [推断]`执行extracteROIConfig操作
+    - `getSportInfoList() [推断]`获取sportInfoList值
+
+### ts-identity
+- **IdentityCache.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/cache/IdentityCache.java`)
+  - **global** — 提供 identity 相关工具方法
+    - `initIdentityCache() [推断]`初始化identityCache
+    - `initIdentityModuleConfig() [推断]`初始化identityModuleConfig
+    - `initDeviceGroup() [推断]`初始化deviceGroup
+- **IdentityController.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/controller/IdentityController.java`)
+  - **global** — 提供 identity 相关工具方法
+    - `getValidConfig() [人工]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [人工]`获取configBySelfConfigMessage值
+    - `refreshConfig() [人工]`刷新身份识别模块配置缓存
+    - `getRunStatus() [人工]`获取runStatus值
+    - `cleanPanelSession() [人工]`清除面板机本地会话记录
+    - `getStationPictureCount() [人工]`获取站内图片数量
+    - `appendStationPicture() [人工]`增量同步站内人员底库图片
+    - `addStationPicture() [人工]`增量添加人员图片到站内底库
+    - `addStationPicture2() [人工]`增量添加人员图片到站内底库V2
+    - `deleteStationPicture() [人工]`从站内底库删除指定人员图片
+    - `deleteStationPictureBatch() [人工]`批量删除站内底库人员图片
+    - `updateStationPicture() [人工]`更新站内底库人员图片信息
+    - `simulateInCheck() [人工]`模拟人员入库检查流程
+    - `createDynamicStorage() [人工]`创建动态人脸底库分组
+    - `createDynamicStorageAndBindFace() [人工]`创建动态底库并绑定人脸分组
+    - `deleteDynamicStorage() [人工]`删除动态人脸底库分组
+    - `queryDynamicStorage() [人工]`查询动态人脸底库分组信息
+    - `addPersonPictureToDynamicStorage() [人工]`添加人员图片到动态底库
+    - `exists() [人工]`查询人员是否在底库中存在
+    - `queryUid() [人工]`根据条件查询人员UID信息
+    - `queryByFaceToken() [人工]`根据人脸Token查询人员UID
+    - `queryUidByCode() [人工]`根据识别代码查询人员UID
+    - `appendStationPictureByIp() [人工]`按IP增量同步站内底库到指定设备
+    - `addPersonByIp() [人工]`向指定IP设备添加人员信息
+    - `deleteAllPerson() [人工]`全量清空训练站人员底库
+    - `deletePartPerson() [人工]`部分删除训练站人员底库
+    - `deleteNonGroupPerson() [人工]`删除未分组人员底库数据
+    - `searchFaceByFaceTokenOrDescription() [人工]`按人脸Token或描述检索底库人员
+    - `findInconsistent() [人工]`获取设备端与云端人员不一致列表
+    - `core1vNFaceSearch() [人工]`执行1比N人脸检索给core版本
+- **TTT.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/controller/TTT.java`)
+  - **global** — 提供 identity 相关工具方法
+    - `main() [推断]`程序主入口
+- **TaskMakeUpPersonJob.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/job/TaskMakeUpPersonJob.java`)
+  - **global** — 提供 identity 相关工具方法
+    - `makeUpPerson() [推断]`执行makeUpPerson操作
+    - `loadUidMapping() [推断]`加载uidMapping
+- **AthleteFaceFailServiceImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/AthleteFaceFailServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `saveFaceFail() [推断]`保存faceFail数据
+    - `deleteIds() [推断]`批量删除指定ID记录
+    - `deleteByUidAndDeviceIp() [推断]`删除byUidAndDeviceIp记录
+- **AthleteFacesServiceImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/AthleteFacesServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `resetAllAthleteFace() [推断]`重置allAthleteFace
+    - `saveNonFacePadAthleteFace() [推断]`保存nonFacePadAthleteFace数据
+    - `getAthleteFacesByPersonId() [推断]`获取athleteFacesByPersonId值
+    - `deletePersonFromDB() [推断]`删除personFromDB记录
+    - `deletePersonNameFromDB() [推断]`删除personNameFromDB记录
+    - `deleteIds() [推断]`批量删除指定ID记录
+    - `method() [推断]`执行method操作
+- **FacePanelServiceImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/FacePanelServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getFacesCount() [推断]`获取人脸数量
+    - `method() [推断]`执行method操作
+    - `panelQueryGroupByScheduleId() [推断]`执行panelQueryGroupByScheduleId操作
+    - `panelCreateGroup() [推断]`执行panelCreateGroup操作
+    - `panelDeleteGroup() [推断]`执行panelDeleteGroup操作
+    - `panelCreateFace() [推断]`执行panelCreateFace操作
+    - `panelDeleteFace() [推断]`执行panelDeleteFace操作
+    - `panelForceDelete() [推断]`执行panelForceDelete操作
+    - `panelForceDeleteByPersonId() [推断]`执行panelForceDeleteByPersonId操作
+    - `panelUpdateFaceReally() [推断]`执行panelUpdateFaceReally操作
+    - `panelBindingFaceToGroup() [推断]`执行panelBindingFaceToGroup操作
+    - `deleteFaceLib() [推断]`删除人脸底库
+    - `queryPersonById() [推断]`查询personById数据
+    - `login() [推断]`执行用户登录
+    - `ipBuildURI() [推断]`构建IP地址URI
+- **FileUtils.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/FileUtils.java`)
+  - **global** — 提供 service 相关工具方法
+    - `unPackZip() [推断]`执行unPackZip操作
+    - `readZipFile() [推断]`执行readZipFile操作
+    - `img64MoreThan4096() [推断]`执行img64MoreThan4096操作
+- **IdentityServiceImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/IdentityServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getValidConfig() [推断]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [推断]`获取configBySelfConfigMessage值
+    - `refreshConfig() [推断]`刷新模块配置缓存
+    - `getStationPictureCount() [推断]`获取stationPictureCount值
+    - `addStationPicture() [推断]`添加stationPicture
+    - `addPersonByIp() [推断]`添加personByIp
+    - `checkPersonParam() [推断]`执行参数/状态/格式校验 — `public void checkPersonParam(PersonFaceAddReq req) {`
+    - `addPictureFace() [推断]`添加pictureFace
+    - `deleteStationPicture() [推断]`删除stationPicture记录
+    - `updateStationPicture() [推断]`更新stationPicture信息
+    - `createDynamicStorage() [推断]`创建dynamicStorage
+    - `createDynamicStorageAndBindFace() [推断]`创建dynamicStorageAndBindFace
+    - `deleteDynamicStorage() [推断]`删除dynamicStorage记录
+    - `addPersonPictureToDynamicStorage() [推断]`添加personPictureToDynamicStorage
+    - `appendStationPicture() [推断]`执行appendStationPicture操作
+    - `queryUid() [推断]`查询uid数据
+    - `queryByFaceToken() [推断]`查询byFaceToken数据
+    - `appendStationPictureByIp() [推断]`执行appendStationPictureByIp操作
+    - `deleteAllPersonOnly() [推断]`删除allPersonOnly记录
+    - `resultDeviceList() [推断]`执行resultDeviceList操作
+    - `queryUidByCode() [推断]`查询uidByCode数据
+    - `queryByImageMd5() [推断]`查询byImageMd5数据
+    - `queryByMd5AndIp() [推断]`查询byMd5AndIp数据
+    - `queryByUidAndIp() [推断]`查询byUidAndIp数据
+    - `deleteByUidAndIp() [推断]`删除byUidAndIp记录
+    - `deletePartPerson() [推断]`删除partPerson记录
+    - `findAndDeleteNonGroupFaces() [推断]`查找andDeleteNonGroupFaces记录
+    - `forceDeletePerson() [推断]`执行forceDeletePerson操作
+    - `findInconsistent() [推断]`查找inconsistent记录
+    - `method() [推断]`执行method操作
+    - `getRecheckEnable() [推断]`获取recheckEnable状态
+    - `queryByFaceImage() [推断]`查询byFaceImage数据
+- **MegBoxServiceImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/MegBoxServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getFacesCount() [推断]`获取人脸数量
+    - `megBoxCheckFace() [推断]`执行megBoxCheckFace操作
+    - `megBoxCreateGroup() [推断]`执行megBoxCreateGroup操作
+    - `megBoxDeleteGroup() [推断]`执行megBoxDeleteGroup操作
+    - `megBoxCreateFace() [推断]`执行megBoxCreateFace操作
+    - `megBoxDeleteFace() [推断]`执行megBoxDeleteFace操作
+    - `megBoxForceDelete() [推断]`执行megBoxForceDelete操作
+    - `megBoxUpdateFace() [推断]`执行megBoxUpdateFace操作
+    - `megBoxBindingFaceToGroup() [推断]`执行megBoxBindingFaceToGroup操作
+    - `megBoxBindingFaceToDefaultGroup() [推断]`执行megBoxBindingFaceToDefaultGroup操作
+    - `ipBuildURI() [推断]`构建IP地址URI
+    - `deleteFaceImage() [推断]`删除人脸图片
+    - `bindFaceTokenToFaceGroups() [推断]`绑定faceTokenToFaceGroups
+    - `deleteFaceLib() [推断]`删除人脸底库
+    - `deleteImageAndFaceToken() [推断]`删除imageAndFaceToken记录
+    - `method() [推断]`执行method操作
+    - `getAllFacesFromMegBox() [推断]`获取allFacesFromMegBox值
+    - `getFaceByToken() [推断]`按人脸Token查询人脸信息
+- **PersonImagesServiceImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/PersonImagesServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `uploadImgZip() [推断]`执行文件读写/复制/移动/删除/上传/下载
+    - `handlerPicType() [推断]`处理rPicType事件
+- **AuthApiImpl.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/panel/AuthApiImpl.java`)
+  - **global** — 提供 impl 相关工具方法
+    - `method() [推断]`执行AuthApiImpl操作
+    - `login() [推断]`执行用户登录
+- **DefaultApiClient.java** (`ts-identity/src/main/java/com/megvii/trainingstation/identity/service/impl/panel/DefaultApiClient.java`)
+  - **global** — 提供 impl 相关工具方法
+    - `method() [推断]`执行DefaultApiClient操作
+    - `doGet() [推断]`执行doGet操作
+    - `doPostJson() [推断]`执行doPostJson操作
+    - `doPostForm() [推断]`执行doPostForm操作
+    - `doPostFormMultipartByInputStream() [推断]`执行doPostFormMultipartByInputStream操作
+    - `doDeleteJson() [推断]`执行doDeleteJson操作
+
+### ts-driver
+- **R.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/R.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `method() [推断]`执行R操作
+    - `success() [推断]`标记操作成功
+    - `fail() [推断]`标记失败状态
+- **ResultCode.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/ResultCode.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `code() [推断]`执行code操作
+    - `message() [推断]`执行message操作
+- **AddHeaderThreadLocal.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/common/AddHeaderThreadLocal.java`)
+  - **global** — 提供 driver 相关工具方法
+    - `remove() [推断]`执行remove操作
+- **MegviiThreadLocal.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/common/MegviiThreadLocal.java`)
+  - **global** — 提供 driver 相关工具方法
+    - `method() [推断]`执行MegviiThreadLocal操作
+    - `toString() [推断]`生成对象字符串表示
+- **AddHeadersAspect.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/config/AddHeadersAspect.java`)
+  - **global** — 提供 driver 相关工具方法
+    - `addHeaders() [推断]`添加headers
+    - `doAround() [推断]`执行doAround操作
+- **ScreenDriverServiceImpl.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/service/impl/ScreenDriverServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getTimestamp() [推断]`获取时间戳
+    - `startBasicTask() [推断]`启动基础训练任务
+    - `startRunTask() [推断]`启动跑步训练任务
+    - `stopBasicTask() [推断]`停止基础训练任务
+    - `goRunTask() [推断]`触发跑步任务执行
+    - `stopRunTask() [推断]`停止跑步训练任务
+    - `loginChallenge() [推断]`执行登录挑战认证
+    - `login() [推断]`执行用户登录
+    - `getFacesCount() [推断]`获取人脸数量
+    - `addFace() [推断]`添加人脸数据
+    - `deleteFaceImage() [推断]`删除人脸图片
+    - `updateFaceImages() [推断]`更新人脸图片数据
+    - `addFaceGroups() [推断]`添加faceGroups
+    - `deleteFaceGroups() [推断]`删除faceGroups记录
+    - `querySchedules() [推断]`查询训练计划列表
+    - `queryGroups() [推断]`查询人员分组列表
+    - `queryFace() [推断]`查询人脸信息
+    - `queryFaceById() [推断]`按ID查询人脸信息
+    - `putDeviceConfig() [推断]`写入设备配置参数
+    - `getRecognitionConfig() [推断]`获取识别模块配置
+    - `putRecognitionConfig() [推断]`写入识别模块配置
+- **ScreenPluginServiceImpl.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/service/impl/ScreenPluginServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `getTimestamp() [推断]`获取时间戳
+    - `startBasicTask() [推断]`启动基础训练任务
+    - `startRunTask() [推断]`启动跑步训练任务
+    - `stopBasicTask() [推断]`停止基础训练任务
+    - `goRunTask() [推断]`触发跑步任务执行
+    - `stopRunTask() [推断]`停止跑步训练任务
+    - `loginChallenge() [推断]`执行登录挑战认证
+    - `login() [推断]`执行用户登录
+    - `getFacesCount() [推断]`获取人脸数量
+    - `addFace() [推断]`添加人脸数据
+    - `deleteFaceImage() [推断]`删除人脸图片
+    - `updateFaceImages() [推断]`更新人脸图片数据
+    - `addFaceGroups() [推断]`添加faceGroups
+    - `deleteFaceGroups() [推断]`删除faceGroups记录
+    - `querySchedules() [推断]`查询训练计划列表
+    - `queryGroups() [推断]`查询人员分组列表
+    - `queryFace() [推断]`查询人脸信息
+    - `queryFaceById() [推断]`按ID查询人脸信息
+    - `putDeviceConfig() [推断]`写入设备配置参数
+    - `getRecognitionConfig() [推断]`获取识别模块配置
+    - `putRecognitionConfig() [推断]`写入识别模块配置
+- **ServerDriverServiceImpl.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/service/impl/ServerDriverServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `login() [推断]`执行用户登录
+    - `injectPatch() [推断]`注入补丁代码
+    - `registration() [推断]`执行设备注册流程
+    - `enableAnalysis() [推断]`启用数据分析功能
+    - `getAnalysisTasks() [推断]`获取analysisTasks值
+    - `disableAnalysis() [推断]`禁用数据分析功能
+    - `getTimestamp() [推断]`获取时间戳
+    - `setAnalysisConfig() [推断]`设置analysisConfig值
+    - `getAnalysisConfig() [推断]`获取analysisConfig值
+    - `getVersion() [推断]`获取version值
+    - `reboot() [推断]`执行设备重启
+    - `otaUpgrade() [推断]`执行设备OTA升级
+    - `getFacesCount() [推断]`获取人脸数量
+    - `addFace() [推断]`添加人脸数据
+    - `addFaceTransaction() [推断]`添加faceTransaction
+    - `deleteFaceImage() [推断]`删除人脸图片
+    - `addFaceGroup() [推断]`添加faceGroup
+    - `deleteFaceGroup() [推断]`删除faceGroup记录
+    - `bindFaceGroup() [推断]`绑定faceGroup
+    - `resetFaceGroup() [推断]`重置人脸底库分组
+    - `getAllFaces() [推断]`获取allFaces值
+    - `resendAlgMultiAlert() [推断]`重发算法多重告警
+    - `getFaceByToken() [推断]`按人脸Token查询人脸信息
+    - `addVideo() [推断]`添加video
+    - `putConfigByType() [推断]`按类型写入配置
+    - `searchFace() [推断]`执行人脸检索
+- **ServerPluginServiceImpl.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/service/impl/ServerPluginServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `login() [推断]`执行用户登录
+    - `injectPatch() [推断]`注入补丁代码
+    - `registration() [推断]`执行设备注册流程
+    - `enableAnalysis() [推断]`启用数据分析功能
+    - `disableAnalysis() [推断]`禁用数据分析功能
+    - `getAnalysisTasks() [推断]`获取analysisTasks值
+    - `getTimestamp() [推断]`获取时间戳
+    - `setAnalysisConfig() [推断]`设置analysisConfig值
+    - `getAnalysisConfig() [推断]`获取analysisConfig值
+    - `getVersion() [推断]`获取version值
+    - `reboot() [推断]`执行设备重启
+    - `otaUpgrade() [推断]`执行设备OTA升级
+    - `getFacesCount() [推断]`获取人脸数量
+    - `addFace() [推断]`添加人脸数据
+    - `addFaceTransaction() [推断]`添加faceTransaction
+    - `deleteFaceImage() [推断]`删除人脸图片
+    - `addFaceGroup() [推断]`添加faceGroup
+    - `deleteFaceGroup() [推断]`删除faceGroup记录
+    - `bindFaceGroup() [推断]`绑定faceGroup
+    - `resetFaceGroup() [推断]`重置人脸底库分组
+    - `getAllFaces() [推断]`获取allFaces值
+    - `resendAlgMultiAlert() [推断]`重发算法多重告警
+    - `getFaceByToken() [推断]`按人脸Token查询人脸信息
+    - `addVideo() [推断]`添加video
+    - `putConfigByType() [推断]`按类型写入配置
+    - `searchFace() [推断]`执行人脸检索
+- **AIBoxDriverUtils.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/utils/AIBoxDriverUtils.java`)
+  - **global** — 提供 driver 相关工具方法
+    - `execTelnetPatchCheck() [推断]`执行execTelnetPatchCheck操作
+    - `execTelnetInjectPatchExec() [推断]`执行execTelnetInjectPatchExec操作
+    - `execTelnetCleanCmd() [推断]`执行execTelnetCleanCmd操作
+    - `de() [推断]`执行de操作
+- **PandoraDriverUtils.java** (`ts-driver/src/main/java/com/megvii/trainingstation/driver/utils/PandoraDriverUtils.java`)
+  - **global** — 提供 driver 相关工具方法
+    - `newRequest() [推断]`执行newRequest操作
+
+### ts-complex
+- **ComplexController.java** (`ts-complex/src/main/java/com/megvii/trainingstation/complex/controller/ComplexController.java`)
+  - **global** — 提供 complex 相关工具方法
+    - `importUidsByExcel() [推断]`导入uidsByExcel
+    - `getUidsNonFacePad() [推断]`获取uidsNonFacePad值
+- **ComplexServiceImpl.java** (`ts-complex/src/main/java/com/megvii/trainingstation/complex/serivce/impl/ComplexServiceImpl.java`)
+  - **global** — 提供 serivce 相关工具方法
+    - `loadExcel() [推断]`执行loadExcel操作
+    - `buildRequestBody() [推断]`构建requestBody
+- **CBasketBallShSportPolicy.java** (`ts-complex/src/main/java/com/megvii/trainingstation/training/service/policy/matrix/comp/CBasketBallShSportPolicy.java`)
+  - **global** — 提供 matrix 相关工具方法
+    - `type() [推断]`获取枚举类型标识
+    - `create() [推断]`创建新实例或记录
+- **CPandoraBadmintonSportPolicy101.java** (`ts-complex/src/main/java/com/megvii/trainingstation/training/service/policy/matrix/comp/CPandoraBadmintonSportPolicy101.java`)
+  - **global** — 提供 matrix 相关工具方法
+    - `type() [推断]`获取枚举类型标识
+    - `ready() [推断]`标记对象就绪状态
+    - `go() [推断]`启动执行流程
+    - `compute() [推断]`执行计算逻辑
+    - `history() [推断]`获取历史记录
+    - `create() [推断]`创建新实例或记录
+    - `rego() [推断]`重新进入就绪态
+    - `stop() [推断]`停止当前运行流程
+    - `beforeKill() [推断]`终止前预处理
+    - `kill() [推断]`强制终止任务或进程
+    - `afterKill() [推断]`终止后清理
+    - `afterCreate() [推断]`创建后回调
+    - `autoReady() [推断]`自动标记就绪
+
+### ts-datasync
+- **DataSyncCache.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/cache/DataSyncCache.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `initDataSyncCache() [推断]`初始化dataSyncCache
+- **DataSyncController.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/controller/DataSyncController.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `getValidConfig() [人工]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [人工]`获取configBySelfConfigMessage值
+    - `refreshConfig() [人工]`刷新数据同步模块配置缓存
+    - `getRunStatus() [人工]`获取runStatus值
+    - `getCustomJsonConfigFromDBForMegvii() [人工]`获取customJsonConfigFromDBForMegvii值
+    - `setCustomJsonConfigFromDBForMegvii() [人工]`设置customJsonConfigFromDBForMegvii值
+    - `updateToDeliveryFailed() [人工]`将成绩推送状态更新为投递失败
+    - `updateToDeliverySuccess() [人工]`将成绩推送状态更新为投递成功
+    - `getDeliveryFailed() [人工]`获取deliveryFailed值
+    - `getScoreByTaskList() [人工]`获取scoreByTaskList值
+    - `getScoreByQyDate() [人工]`获取scoreByQyDate值
+    - `getScoreByQyTimes() [人工]`获取scoreByQyTimes值
+    - `getScoreByUid() [人工]`获取scoreByUid值
+    - `getInternalScoreByUid() [人工]`获取internalScoreByUid值
+    - `queryScoreForRank() [人工]`查询成绩数据用于排名计算
+    - `setScorePushHttp() [人工]`设置scorePushHttp值
+    - `setScorePushWebSocket() [人工]`设置scorePushWebSocket值
+    - `getScorePushHttp() [人工]`获取scorePushHttp值
+    - `getScorePushWebSocket() [人工]`获取scorePushWebSocket值
+    - `setScorePushKafka() [人工]`设置scorePushKafka值
+    - `updateScoreToIgnore() [人工]`将成绩标记为忽略状态
+- **DataSyncTestController.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/controller/DataSyncTestController.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `pushDataToQueue() [推断]`推送数据toQueue
+    - `pushTrainingDataToLog() [推断]`推送trainingDataToLog
+- **PushDataKafkaService.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/kafka/PushDataKafkaService.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `pushTrainingData() [推断]`推送训练数据到云端
+    - `pushTrainingDataConfirm() [推断]`推送trainingDataConfirm
+- **TrainingDataRouteHandlerService.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/service/TrainingDataRouteHandlerService.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `dataHandler() [推断]`执行dataHandler操作
+    - `pushDataToDB() [推断]`推送dataToDB
+    - `webSocketSendMessage() [推断]`执行webSocketSendMessage操作
+    - `checkHttpConfig() [推断]`执行参数/状态/格式校验 — `public boolean checkHttpConfig() {`
+    - `checkWebSocketConfig() [推断]`执行参数/状态/格式校验 — `public String checkWebSocketConfig() {`
+    - `checkKafkaConfig() [推断]`执行参数/状态/格式校验 — `public boolean checkKafkaConfig() {`
+    - `httpSendMessage() [推断]`执行httpSendMessage操作
+    - `recover() [推断]`执行recover操作
+    - `httpSendMessageConfirm() [推断]`执行httpSendMessageConfirm操作
+    - `kafkaSendMessage() [推断]`执行kafkaSendMessage操作
+    - `kafkaSendMessageConfirm() [推断]`执行kafkaSendMessageConfirm操作
+    - `sportIdToParentId() [推断]`执行sportIdToParentId操作
+- **AthletePushFailedServiceImpl.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/service/impl/AthletePushFailedServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+- **AthleteTaskInfoScoreServiceImpl.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/service/impl/AthleteTaskInfoScoreServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+- **DataSyncServiceImpl.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/service/impl/DataSyncServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getValidConfig() [推断]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [推断]`获取configBySelfConfigMessage值
+    - `refreshConfig() [推断]`刷新模块配置缓存
+    - `getScoreByTaskList() [推断]`获取scoreByTaskList值
+    - `getScoreByQyDate() [推断]`获取scoreByQyDate值
+    - `getScoreByQyTimes() [推断]`获取scoreByQyTimes值
+    - `setScorePushHttp() [推断]`设置scorePushHttp值
+    - `setEventPushKafka() [推断]`设置eventPushKafka值
+    - `isUrlCheck() [推断]`判断UrlCheck状态
+    - `isWSUrlCheck() [推断]`判断WSUrlCheck状态
+    - `isUrlCheckNoHttp() [推断]`判断UrlCheckNoHttp状态
+    - `commonScoreHandler() [推断]`执行commonScoreHandler操作
+    - `getTotalScore() [推断]`获取totalScore值
+    - `updateScoreByTaskId() [推断]`更新scoreByTaskId信息
+    - `getScoreByQyUid() [推断]`获取scoreByQyUid值
+    - `setJSONValFromDb() [推断]`设置jSONValFromDb值
+    - `getJSONValFromDb() [推断]`获取jSONValFromDb值
+    - `method() [推断]`执行method操作
+    - `getScorePushHttp() [推断]`获取scorePushHttp值
+    - `getScorePushWebSocket() [推断]`获取scorePushWebSocket值
+    - `setScorePushWebSocket() [推断]`设置scorePushWebSocket值
+    - `updateScoreToIgnore() [推断]`更新scoreToIgnore信息
+- **ClientEndpoint.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/webSocket/ClientEndpoint.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `method() [推断]`执行ClientEndpoint操作
+    - `onOpen() [推断]`处理连接打开事件
+- **DeviceConnectionWebSocket.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/webSocket/DeviceConnectionWebSocket.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `onMessage() [推断]`处理接收到的消息
+    - `open() [推断]`打开资源连接
+    - `onClose() [推断]`处理连接关闭事件
+    - `onError() [推断]`处理连接错误事件
+- **TrainingTaskInfoScoreWebSocket.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/webSocket/TrainingTaskInfoScoreWebSocket.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `sendMessage() [推断]`发送消息到目标
+    - `open() [推断]`打开资源连接
+    - `onClose() [推断]`处理连接关闭事件
+    - `onError() [推断]`处理连接错误事件
+- **WebSocketClientUtil.java** (`ts-datasync/src/main/java/com/megvii/trainingstation/datasync/webSocket/WebSocketClientUtil.java`)
+  - **global** — 提供 datasync 相关工具方法
+    - `sendMessage() [推断]`发送消息到目标
+    - `resetConnection() [推断]`重置connection
+    - `startHeartbeat() [推断]`启动heartbeat流程
+    - `scheduleReconnect() [推断]`调度reconnect
+
+### ts-ops
+- **OpsController.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/controller/OpsController.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `keeplive() [人工]`上报运维心跳保活状态
+    - `getValidConfig() [人工]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [人工]`获取configBySelfConfigMessage值
+    - `refreshConfig() [人工]`刷新运维模块配置缓存
+    - `getCheckinConfigs() [人工]`获取checkinConfigs值
+    - `setCheckinConfigs() [人工]`设置checkinConfigs值
+    - `setnRunSportNotificationDelay() [人工]`设置nRunSportNotificationDelay值
+    - `getRunStatus() [人工]`获取runStatus值
+    - `getLiveCamera() [人工]`获取liveCamera值
+    - `setCameraAudio() [人工]`设置cameraAudio值
+    - `setCameraStream() [人工]`设置cameraStream值
+    - `setCameraOSD() [人工]`设置cameraOSD值
+    - `getInternalLiveCamera() [人工]`获取internalLiveCamera值
+    - `getTodayLog() [人工]`获取todayLog值
+    - `getMultipleLogs() [人工]`获取multipleLogs值
+    - `getLogsByDate() [人工]`获取logsByDate值
+    - `getTrainingStatioInfoForApeAssistant() [人工]`获取trainingStatioInfoForApeAssistant值
+    - `getTrainingStationIpList() [人工]`获取trainingStationIpList值
+    - `setScreenLock() [人工]`设置screenLock值
+    - `setScreenTTSConfig() [人工]`设置screenTTSConfig值
+    - `setScreenAutoturnoff() [人工]`设置screenAutoturnoff值
+    - `setScreenFaceConfig() [人工]`设置screenFaceConfig值
+    - `setScreenVolumeConfig() [人工]`设置screenVolumeConfig值
+    - `lanConfig() [人工]`配置局域网网络参数
+    - `getPubkey() [人工]`获取pubkey值
+    - `getTrainingStationVersion() [人工]`获取trainingStationVersion值
+    - `enableSSH() [人工]`启用SSH远程访问服务
+    - `disableSSH() [人工]`禁用SSH远程访问服务
+    - `restart() [人工]`重启训练站服务进程
+    - `powerReboot() [人工]`执行训练站电源重启
+    - `powerShutdown() [人工]`执行训练站电源关机
+    - `getDeviceListInfo() [人工]`获取deviceListInfo值
+    - `upgradeTrainingStation() [人工]`执行训练站固件OTA升级
+    - `batchUpgradeTrainingStation() [人工]`批量执行训练站固件升级
+    - `connectVerify() [人工]`验证升级包上传连接与完整性
+    - `trainingStationVersionUpgradeStatus() [人工]`查询训练站版本升级状态
+    - `exportSnapshot() [人工]`导出训练站运行快照
+    - `autoConfig() [人工]`执行运维模块自动配置
+    - `autoConfigStatus() [人工]`查询自动配置执行状态
+    - `ntpServer() [人工]`配置NTP时间同步服务器地址
+    - `getEnableTrainingSportList() [人工]`获取enableTrainingSportList值
+    - `activeTrainingModule() [人工]`激活指定训练模块功能
+    - `activeTrainingStation() [人工]`激活训练站整体服务授权
+    - `marksCallback() [人工]`接收成绩标记回调通知
+    - `refreshTaskConfig() [人工]`刷新任务配置缓存
+    - `getTimeConfig() [人工]`获取timeConfig值
+    - `setTimeConfig() [人工]`设置timeConfig值
+    - `setTimeNtpSync() [人工]`设置timeNtpSync值
+    - `intoInternalDeviceNetwork() [人工]`进入设备内部网络环境
+    - `getStationConfigs() [人工]`获取stationConfigs值
+    - `setStationConfigsDB() [人工]`设置stationConfigsDB值
+    - `getSportConfigs() [人工]`获取sportConfigs值
+    - `setSportConfigs() [人工]`设置sportConfigs值
+    - `setSportConfigs2DB() [人工]`设置sportConfigs2DB值
+    - `setStationConfigs() [人工]`设置stationConfigs值
+    - `setCustomSportConfigs() [人工]`设置customSportConfigs值
+    - `getCustomSportConfigs() [人工]`获取customSportConfigs值
+    - `getDashboardDataForManagerApe() [人工]`获取dashboardDataForManagerApe值
+    - `getIdentifyDataForManagerApe() [人工]`获取identifyDataForManagerApe值
+    - `getConfigurationDataForManagerApe() [人工]`获取configurationDataForManagerApe值
+    - `getOperationDataForManagerApe() [人工]`获取operationDataForManagerApe值
+    - `killRunningTask() [人工]`强制终止正在运行的训练任务
+    - `loopOTAFacePad() [人工]`循环OTA升级面板机固件
+    - `loopOTAFacePadRom() [人工]`循环OTA升级面板机ROM
+    - `获取相机标定信息() [人工]`获取相机标定参数信息
+    - `getIpDefine() [人工]`获取ipDefine值
+    - `canConnectionToWWW() [人工]`检测训练站外网连通性
+    - `activePole() [人工]`激活立杆设备接入
+    - `findActiveStatus() [人工]`查询训练站激活状态
+    - `findBasicList() [人工]`查询基础配置项列表
+    - `netPing() [人工]`执行网络Ping探测
+    - `getStationMode() [人工]`获取stationMode值
+    - `setStationMode() [人工]`设置stationMode值
+    - `method() [人工]`构造输入流包装器实例
+    - `run() [人工]`执行线程/任务逻辑
+- **XJob.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/jobx/XJob.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `heartbeat() [推断]`执行heartbeat操作
+    - `autoUpgrade() [推断]`执行autoUpgrade操作
+    - `autoRestart() [推断]`执行autoRestart操作
+    - `cleanSystemDockerLogVolumn() [推断]`清理systemDockerLogVolumn
+    - `printAllInOneVersion() [推断]`打印allInOneVersion
+- **MultiThreadedDownloadService.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/service/impl/MultiThreadedDownloadService.java`)
+  - **global** — 提供 service 相关工具方法
+    - `downloadFile() [推断]`执行文件读写/复制/移动/删除/上传/下载
+- **OpsServiceImpl.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/service/impl/OpsServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `changeCameraVideoComplex() [推断]`执行changeCameraVideoComplex操作
+    - `clearOldLog() [推断]`清空oldLog
+    - `setSystemTime() [推断]`设置systemTime值
+    - `setNtpSync() [推断]`设置ntpSync值
+    - `changeFileOwnerToTS() [推断]`执行changeFileOwnerToTS操作
+    - `executeCommand() [推断]`执行command
+    - `getDashboardData() [推断]`获取dashboardData值
+    - `getConfigurationData() [推断]`获取configurationData值
+    - `getOperationData() [推断]`获取operationData值
+    - `getDeviceStatus() [推断]`获取deviceStatus值
+    - `getCameraPreview() [推断]`获取cameraPreview值
+    - `mergeCameraPreviewWithROI() [推断]`合并相机预览与ROI区域
+    - `method() [推断]`执行method操作
+    - `activePole() [推断]`执行activePole操作
+    - `packageAllInOne() [推断]`执行packageAllInOne操作
+    - `setStationRunningMode() [推断]`设置stationRunningMode值
+- **ArgumentsNotValidException.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/utils/ArgumentsNotValidException.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `method() [推断]`执行ArgumentsNotValidException操作
+- **Base64NotValid.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/utils/Base64NotValid.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `method() [推断]`执行Base64NotValid操作
+- **EncryptionUtil.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/utils/EncryptionUtil.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `decryptFile() [推断]`解密file
+    - `removeExtension() [推断]`移除extension数据
+- **OpsUtils.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/utils/OpsUtils.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `isTimeFormatValid() [推断]`判断TimeFormatValid状态
+    - `convert() [推断]`执行convert操作
+    - `formatMacAddress() [推断]`格式化macAddress
+- **SysTimeUtils.java** (`ts-ops/src/main/java/com/megvii/trainingstation/ops/utils/SysTimeUtils.java`)
+  - **global** — 提供 ops 相关工具方法
+    - `main() [推断]`程序主入口
+    - `showTimeStatus() [推断]`执行showTimeStatus操作
+    - `syncHardwareClock() [推断]`同步hardwareClock数据
+
+### ts-configuration
+- **WebConfiguration.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/config/WebConfiguration.java`)
+  - **global** — 提供 configuration 相关工具方法
+    - `method() [推断]`执行WebConfiguration操作
+    - `addInterceptors() [推断]`添加interceptors
+- **WhiteListConfig.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/config/WhiteListConfig.java`)
+  - **global** — 提供 configuration 相关工具方法
+    - `afterPropertiesSet() [推断]`执行afterPropertiesSet操作
+    - `method() [推断]`执行method操作
+- **SystemConfigurationController.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/controller/SystemConfigurationController.java`)
+  - **global** — 提供 configuration 相关工具方法
+    - `method() [推断]`执行内部方法
+    - `setWhitelist() [推断]`设置whitelist值
+    - `setWhitelistLimit() [推断]`设置whitelistLimit值
+    - `getWhitelist() [推断]`获取whitelist值
+    - `setHeartbeatUrl() [推断]`设置heartbeatUrl值
+    - `getHeartbeatConfig() [推断]`获取heartbeatConfig值
+    - `getPoleInfoByIp() [推断]`获取poleInfoByIp值
+    - `getSportInfoById() [推断]`获取sportInfoById值
+    - `getLaneConfig() [推断]`获取laneConfig值
+    - `disableLane() [推断]`禁用lane
+    - `enableLane() [推断]`启用lane
+    - `getLogoConfig() [推断]`获取logoConfig值
+    - `changeLogo() [推断]`修改logo
+    - `getStationDeviceInfo() [推断]`获取stationDeviceInfo值
+    - `getStationPoleInfo() [推断]`获取stationPoleInfo值
+    - `getStationTime() [推断]`获取stationTime值
+    - `getSportPolicy() [推断]`获取sportPolicy值
+    - `getBatchSportPolicy() [推断]`获取batchSportPolicy值
+    - `setPolicy() [推断]`设置policy值
+- **AthleteConfigurationItem.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/domain/AthleteConfigurationItem.java`)
+  - **global** — 提供 configuration 相关工具方法
+    - `equals() [推断]`比较对象相等性
+    - `hashCode() [推断]`检查是否存在hCode
+    - `toString() [推断]`生成对象字符串表示
+- **Whitelist.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/domain/Whitelist.java`)
+  - **global** — 提供 configuration 相关工具方法
+    - `equals() [推断]`比较对象相等性
+    - `hashCode() [推断]`检查是否存在hCode
+    - `toString() [推断]`生成对象字符串表示
+- **IllegalDetail.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/domain/training/IllegalDetail.java`)
+  - **global** — 提供 domain 相关工具方法
+    - `method() [推断]`执行IllegalDetail操作
+- **AthleteConfigurationServiceImpl.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/service/impl/AthleteConfigurationServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getConfigurationByModule() [推断]`按模块名获取配置信息
+    - `getConfigurationByVariable() [推断]`按变量名获取配置信息
+    - `getConfigurationMapByVariable() [推断]`获取configurationMapByVariable值
+    - `getConfigurationMapWithoutByVariable() [推断]`获取configurationMapWithoutByVariable值
+    - `setHeartbeatUrl() [推断]`设置heartbeatUrl值
+    - `setWhiteListLimit() [推断]`设置whiteListLimit值
+    - `getPoleInfoByIp() [推断]`获取poleInfoByIp值
+    - `getSportInfoById() [推断]`获取sportInfoById值
+    - `getLaneConfig() [推断]`获取laneConfig值
+    - `enableLane() [推断]`启用lane功能
+    - `disableLane() [推断]`禁用lane功能
+    - `changeLogo() [推断]`执行changeLogo操作
+    - `getLogo() [推断]`获取logo值
+    - `method() [推断]`执行method操作
+    - `getPoleInfo() [推断]`获取poleInfo值
+    - `setupPolicy() [推断]`配置运动策略参数
+    - `getBatchSportPolicy() [推断]`批量获取运动策略配置
+    - `getSportPolicyBySportId() [推断]`获取sportPolicyBySportId值
+    - `isPolicyExist() [推断]`判断PolicyExist状态
+    - `getConfigurationItem() [推断]`获取configurationItem值
+    - `updateConfiguationStationConfig() [推断]`更新configuationStationConfig信息
+    - `updateCustomConfiguationSportConfig() [推断]`更新customConfiguationSportConfig信息
+    - `updateAppstoreConfiguationConfig() [推断]`更新appstoreConfiguationConfig信息
+    - `updateConfiguationSportConfig() [推断]`更新运动项目配置
+    - `updatePubkeyConfig() [推断]`更新pubkeyConfig信息
+    - `updateStationLicense() [推断]`更新stationLicense信息
+    - `updateStationCameraAudio() [推断]`更新stationCameraAudio信息
+    - `updateStationCameraStream() [推断]`更新stationCameraStream信息
+    - `setAutoUpgrade() [推断]`设置autoUpgrade值
+- **WhitelistServiceImpl.java** (`ts-configuration/src/main/java/com/megvii/trainingstation/configuration/service/impl/WhitelistServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `setWhitelist() [推断]`设置whitelist值
+    - `method() [推断]`执行method操作
+    - `deleteWhitelist() [推断]`删除whitelist记录
+
+### ts-multimedia
+- **MultiMediaCache.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/cache/MultiMediaCache.java`)
+  - **global** — 提供 multimedia 相关工具方法
+    - `initMultiMediaCache() [推断]`初始化multiMediaCache
+    - `initMultiMediaModuleConfig() [推断]`初始化multiMediaModuleConfig
+- **MultiMediaConfig.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/config/MultiMediaConfig.java`)
+  - **global** — 提供 multimedia 相关工具方法
+    - `executor() [推断]`执行executor操作
+- **MultiMediaController.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/controller/MultiMediaController.java`)
+  - **global** — 提供 multimedia 相关工具方法
+    - `getValidConfig() [推断]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [推断]`获取configBySelfConfigMessage值
+    - `refreshConfig() [推断]`刷新模块配置缓存
+    - `getRunStatus() [推断]`获取runStatus值
+    - `getMediaAddressByCode() [推断]`获取mediaAddressByCode值
+    - `startVideo() [推断]`启动video
+    - `stopVideo() [推断]`停止video
+    - `pictureDownload() [推断]`下载图片
+    - `videoDownload() [推断]`下载视频
+    - `gifDownload() [推断]`下载GIF
+    - `startAudioRecord() [推断]`启动audioRecord
+    - `stopAudioRecord() [推断]`停止audioRecord
+- **MultiMediaService.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/service/MultiMediaService.java`)
+  - **global** — 提供 multimedia 相关工具方法
+    - `mergeVideos() [推断]`合并视频片段
+- **MultiMediaServiceImpl.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/service/impl/MultiMediaServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `getValidConfig() [推断]`获取validConfig值
+    - `getConfigBySelfConfigMessage() [推断]`获取configBySelfConfigMessage值
+    - `refreshConfig() [推断]`刷新模块配置缓存
+    - `urlMappingFilePath() [推断]`执行urlMappingFilePath操作
+    - `getMediaAddressByCode() [推断]`获取mediaAddressByCode值
+    - `startVideo() [推断]`启动video流程
+    - `stopVideo() [推断]`停止video流程
+    - `pictureSaveUrl() [推断]`执行pictureSaveUrl操作
+    - `getMediaConfigFromCache() [推断]`获取mediaConfigFromCache值
+    - `generateStationMediaUrl() [推断]`生成stationMediaUrl
+    - `generateStationImageMediaUrl() [推断]`生成stationImageMediaUrl
+    - `generateStationStreamUrl() [推断]`生成stationStreamUrl
+    - `getVideoStorePath() [推断]`获取videoStorePath值
+    - `getPicStorePath() [推断]`获取picStorePath值
+    - `convertVideoFormatFromMp4ToH264() [推断]`转换videoFormatFromMp4ToH264格式
+    - `getImagesFromVideo() [推断]`获取imagesFromVideo值
+    - `startAudioRecord() [推断]`启动audioRecord流程
+    - `splitVideoToUpAndDown() [推断]`拆分videoToUpAndDown
+    - `urlMapping() [推断]`映射URL到内部服务
+    - `urlMappingBase() [推断]`执行urlMappingBase操作
+    - `getVideoDuration() [推断]`获取videoDuration值
+    - `generateSmallVideoMediaUrl() [推断]`生成小视频媒体URL
+    - `mergeVideos() [推断]`合并视频片段
+    - `getImageFromStream() [推断]`获取imageFromStream值
+    - `videoToPlayback() [推断]`执行videoToPlayback操作
+- **RtspToMP4.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/utils/RtspToMP4.java`)
+  - **global** — 提供 multimedia 相关工具方法
+    - `method() [推断]`执行In操作
+    - `run() [推断]`执行线程/任务逻辑
+    - `startRecord() [推断]`启动record流程
+    - `splitImageFromVideo() [推断]`分割imageFromVideo
+    - `splitVideoFromVideo() [推断]`分割videoFromVideo
+    - `converMp4ToH264() [推断]`执行converMp4ToH264操作
+    - `spitImagesBySecondsFromVideo() [推断]`执行spitImagesBySecondsFromVideo操作
+    - `recordAudio() [推断]`记录audio
+    - `splitVideoToUpAndDown() [推断]`分割videoToUpAndDown
+    - `main() [推断]`程序主入口
+    - `mergeTwoAudio() [推断]`合并twoAudio
+- **UserUtils.java** (`ts-multimedia/src/main/java/com/megvii/trainingstation/multimedia/utils/UserUtils.java`)
+  - **global** — 提供 multimedia 相关工具方法
+    - `main() [推断]`程序主入口
+
+### ts-cloud
+- **CloudPushDataKafkaService.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/ali/kafka/service/CloudPushDataKafkaService.java`)
+  - **global** — 提供 kafka 相关工具方法
+    - `init() [推断]`执行init操作
+    - `method() [推断]`执行method操作
+    - `pushTrainingData() [推断]`推送训练数据到云端
+    - `consumerPros() [推断]`执行consumerPros操作
+    - `producePros() [推断]`执行producePros操作
+- **AliCloudOssConfig.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/ali/oss/config/AliCloudOssConfig.java`)
+  - **global** — 提供 oss 相关工具方法
+    - `ossDownload() [推断]`执行ossDownload操作
+- **CloudConfigurationInitCache.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/cache/CloudConfigurationInitCache.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `initCloudDataCache() [推断]`初始化cloudDataCache
+    - `initCloudConfigurationConfig() [推断]`初始化cloudConfigurationConfig
+- **AliCloudDataConsumerHandler.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/consumer/AliCloudDataConsumerHandler.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `init() [推断]`初始化组件状态
+    - `run() [推断]`执行线程/任务逻辑
+- **AliCloudOTADataConsumerHandler.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/consumer/AliCloudOTADataConsumerHandler.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `dataHandler() [推断]`执行dataHandler操作
+    - `init() [推断]`初始化组件状态
+    - `run() [推断]`执行线程/任务逻辑
+- **AliCloudOpsConsumerHandler.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/consumer/AliCloudOpsConsumerHandler.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `init() [推断]`初始化组件状态
+    - `run() [推断]`执行线程/任务逻辑
+- **CloudController.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/controller/CloudController.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `cloudHeartBeat() [推断]`上报云端心跳
+    - `test() [推断]`执行测试逻辑
+    - `test333() [推断]`测试333
+    - `test222() [推断]`测试222
+- **CloudDataHandlerService.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/handler/CloudDataHandlerService.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `handleTopicMessage() [推断]`处理主题消息
+    - `deleteStationPerson() [推断]`删除stationPerson记录
+- **CloudOtaDataHandlerService.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/handler/CloudOtaDataHandlerService.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `handleTopicMessage() [推断]`处理主题消息
+- **CloudModuleInitializeImpl.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/service/impl/CloudModuleInitializeImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `run() [推断]`执行线程/任务逻辑
+    - `configCloud() [推断]`执行configCloud操作
+    - `configOpsHeartBeat() [推断]`执行configOpsHeartBeat操作
+    - `getLocalService() [推断]`获取localService值
+- **CloudPluginServiceImpl.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/service/impl/CloudPluginServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `before() [推断]`前置处理逻辑
+    - `after() [推断]`后置处理逻辑
+- **CloudServiceImpl.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/service/impl/CloudServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `heartBeat() [推断]`执行heartBeat操作
+    - `pushTrainingData() [推断]`推送训练数据到云端
+    - `pushVideoToCloud() [推断]`推送videoToCloud
+    - `pushPictureToCloud() [推断]`推送pictureToCloud
+    - `pushUserAvatarCallbackToCloud() [推断]`推送userAvatarCallbackToCloud
+    - `pushToCloud() [推断]`推送toCloud
+    - `routeToHttpService() [推断]`执行routeToHttpService操作
+    - `pushMessageToCloud() [推断]`推送messageToCloud
+- **CloudTrainingDataHandlerServiceImpl.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/service/impl/CloudTrainingDataHandlerServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `handlerMessage() [推断]`处理rMessage事件
+- **CloudDataWebSocketClient.java** (`ts-cloud/src/main/java/com/megvii/trainingstation/cloud/websocket/CloudDataWebSocketClient.java`)
+  - **global** — 提供 cloud 相关工具方法
+    - `startWS() [推断]`启动wS流程
+    - `onOpen() [推断]`处理连接打开事件
+    - `onClose() [推断]`处理连接关闭事件
+    - `processMessage() [推断]`处理message逻辑
+    - `onError() [推断]`处理连接错误事件
+
+### ts-checkin
+- **CheckInConfig.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/config/CheckInConfig.java`)
+  - **global** — 提供 checkin 相关工具方法
+    - `method() [推断]`执行CheckInConfig操作
+- **CheckInController.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/controller/CheckInController.java`)
+  - **global** — 提供 checkin 相关工具方法
+    - `method() [推断]`执行内部方法
+    - `recheck() [推断]`复核
+    - `facePadCheckin() [推断]`执行面板机签到
+    - `recheckMock() [推断]`复核mock
+    - `getConfig() [推断]`获取config值
+    - `setRecheckAddr() [推断]`设置recheckAddr值
+    - `getRecheckAddr() [推断]`获取recheckAddr值
+    - `getCheckinModeList() [推断]`获取checkinModeList值
+    - `enableCheckinMode() [推断]`启用checkinMode
+    - `disableCheckinMode() [推断]`禁用checkinMode
+- **CheckinMode.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/domain/CheckinMode.java`)
+  - **global** — 提供 checkin 相关工具方法
+    - `equals() [推断]`比较对象相等性
+    - `hashCode() [推断]`检查是否存在hCode
+    - `toString() [推断]`生成对象字符串表示
+- **FacePadRecheckRes.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/dto/request/FacePadRecheckRes.java`)
+  - **global** — 提供 dto 相关工具方法
+    - `fail() [推断]`标记失败状态
+    - `success() [推断]`标记操作成功
+- **RecheckRes.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/dto/request/RecheckRes.java`)
+  - **global** — 提供 dto 相关工具方法
+    - `fail() [推断]`标记失败状态
+    - `success() [推断]`标记操作成功
+- **CheckinModeServiceImpl.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/service/impl/CheckinModeServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `enableCheckinMode() [推断]`启用checkinMode功能
+    - `disableCheckinMode() [推断]`禁用checkinMode功能
+- **CheckinServiceImpl.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/service/impl/CheckinServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `recheck() [推断]`执行recheck操作
+    - `recheck1() [推断]`执行recheck1操作
+    - `getUid() [推断]`查询人员UID信息
+    - `setRecheckAddr() [推断]`设置复核地址
+    - `doSubscribe() [推断]`执行doSubscribe操作
+    - `doRestartApp() [推断]`执行doRestartApp操作
+    - `getVersion() [推断]`获取version值
+    - `login() [推断]`执行用户登录
+    - `method() [推断]`执行method操作
+    - `toHexString() [推断]`执行toHexString操作
+- **PadServiceImpl.java** (`ts-checkin/src/main/java/com/megvii/trainingstation/checkin/service/impl/PadServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `login() [推断]`执行用户登录
+
+### ts-appstore
+- **AppstoreController.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/controller/AppstoreController.java`)
+  - **global** — 提供 appstore 相关工具方法
+    - `ask() [推断]`请求
+    - `listAppFromAppStore() [推断]`列出应用fromAppStore
+    - `listInstalledAppFromAppStore() [推断]`列出installedAppFromAppStore
+    - `listAppConfig() [推断]`列出应用config
+    - `pullAndInstallAppFromAppStore() [推断]`拉取并安装appFromAppStore
+    - `uninstallApp() [推断]`卸载app
+    - `healthCheck() [推断]`执行健康检查
+- **MessageWebSocket.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/datasync/MessageWebSocket.java`)
+  - **global** — 提供 appstore 相关工具方法
+    - `sendMessage() [推断]`发送消息到目标
+    - `open() [推断]`打开资源连接
+    - `onClose() [推断]`处理连接关闭事件
+    - `onError() [推断]`处理连接错误事件
+- **AppstoreModuleInitializeImpl.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/init/AppstoreModuleInitializeImpl.java`)
+  - **global** — 提供 appstore 相关工具方法
+    - `run() [推断]`执行线程/任务逻辑
+- **AppstoreJob.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/jobx/AppstoreJob.java`)
+  - **global** — 提供 appstore 相关工具方法
+    - `pdnsConnectKeeper() [推断]`执行pdnsConnectKeeper操作
+- **AppstoreServiceImpl.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/serivce/impl/AppstoreServiceImpl.java`)
+  - **global** — 提供 serivce 相关工具方法
+    - `verify() [推断]`执行参数/状态/格式校验 — `public String verify(App app, String account) {`
+    - `pullAppFromAppStore() [推断]`拉取appFromAppStore
+    - `installApp() [推断]`安装app
+    - `startApp() [推断]`启动app流程
+    - `stopApp() [推断]`停止app流程
+    - `removeApp() [推断]`移除app数据
+    - `cleanCacheApp() [推断]`清理cacheApp
+    - `reflectUrlFromPDNS() [推断]`执行reflectUrlFromPDNS操作
+    - `feedback() [推断]`执行feedback操作
+    - `urlMapping() [推断]`映射URL到内部服务
+    - `insertConfig() [推断]`插入config记录
+    - `deleteConfig() [推断]`删除config记录
+    - `method() [推断]`执行method操作
+    - `getPdnsServerUrl() [推断]`获取pdnsServerUrl值
+    - `getPdnsContainerId() [推断]`获取pdnsContainerId值
+- **DockerServiceImpl.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/serivce/impl/DockerServiceImpl.java`)
+  - **global** — 提供 serivce 相关工具方法
+    - `method() [推断]`执行method操作
+    - `loadImage() [推断]`执行loadImage操作
+    - `runImageAsContainer() [推断]`运行imageAsContainer
+    - `stopAndRemoveContainerAndImage() [推断]`停止andRemoveContainerAndImage流程
+    - `inspectContainer() [推断]`执行inspectContainer操作
+    - `restartContainer() [推断]`重启container服务
+- **PromptUtil.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/utils/PromptUtil.java`)
+  - **global** — 提供 appstore 相关工具方法
+    - `main() [推断]`程序主入口
+    - `feedback() [推断]`执行feedback操作
+    - `ask() [推断]`执行ask操作
+    - `tts() [推断]`执行tts操作
+    - `removeNewLines() [推断]`移除newLines数据
+- **SpamReader.java** (`ts-appstore/src/main/java/com/megvii/trainingstation/appstore/utils/SpamReader.java`)
+  - **global** — 提供 appstore 相关工具方法
+    - `method() [推断]`执行SpamReader操作
+    - `check() [推断]`执行参数/状态/格式校验 — `public static boolean check(String words) {`
+    - `spamer() [推断]`执行spamer操作
+    - `init() [推断]`初始化组件状态
+
+### ts-common
+- **FeignOkHttpConfig.java** (`ts-common/src/main/java/com/megvii/trainingstation/common/config/FeignOkHttpConfig.java`)
+  - **global** — 提供 common 相关工具方法
+    - `okHttpClient() [推断]`执行okHttpClient操作
+- **RedisConfig.java** (`ts-common/src/main/java/com/megvii/trainingstation/common/config/RedisConfig.java`)
+  - **global** — 提供 common 相关工具方法
+    - `redisCacheConfiguration() [推断]`执行 Redis 缓存读写/过期/删除操作 — `public RedisCacheConfiguration redisCacheConfiguration(){`
+    - `keyGenerator() [推断]`执行keyGenerator操作
+    - `errorHandler() [推断]`记录错误handler
+    - `handleCacheGetError() [推断]`处理cacheGetError事件
+    - `handleCachePutError() [推断]`处理cachePutError事件
+    - `handleCacheEvictError() [推断]`处理cacheEvictError事件
+    - `method() [推断]`执行method操作
+- **BbuCloudFeignWebConfig.java** (`ts-common/src/main/java/com/megvii/trainingstation/common/feign/BbuCloudFeignWebConfig.java`)
+  - **global** — 提供 common 相关工具方法
+    - `buildFastJsonHttpMessageConverter() [推断]`构建fastJsonHttpMessageConverter
+    - `configureMessageConverters() [推断]`配置messageConverters
+    - `addResourceHandlers() [推断]`添加resourceHandlers
+- **FeignConfiguration.java** (`ts-common/src/main/java/com/megvii/trainingstation/common/feign/FeignConfiguration.java`)
+  - **global** — 提供 common 相关工具方法
+    - `feignDecoder() [推断]`执行feignDecoder操作
+    - `feignEncoder() [推断]`执行feignEncoder操作
+- **MybatisPlusFillHandler.java** (`ts-common/src/main/java/com/megvii/trainingstation/common/handler/MybatisPlusFillHandler.java`)
+  - **global** — 提供 common 相关工具方法
+    - `insertFill() [推断]`插入fill记录
+    - `updateFill() [推断]`更新fill信息
+- **ControllerUtils.java** (`ts-common/src/main/java/com/megvii/trainingstation/common/process/ControllerUtils.java`)
+  - **global** — 提供 common 相关工具方法
+    - `method() [推断]`执行内部方法
+
+### ts-logging
+- **AdminLogAspect.java** (`ts-logging/src/main/java/com/megvii/trainingstation/logging/aspect/AdminLogAspect.java`)
+  - **global** — 提供 logging 相关工具方法
+    - `method() [推断]`执行AdminLogAspect操作
+    - `logPointcut() [推断]`记录pointcut
+    - `logAround() [推断]`记录around
+    - `logAfterThrowing() [推断]`记录afterThrowing
+- **AdminLogController.java** (`ts-logging/src/main/java/com/megvii/trainingstation/logging/controller/AdminLogController.java`)
+  - **global** — 提供 logging 相关工具方法
+    - `download() [推断]`执行文件读写/复制/移动/删除/上传/下载
+    - `errorDownload() [推断]`下载错误日志
+    - `method() [推断]`执行内部方法
+- **LogModel.java** (`ts-logging/src/main/java/com/megvii/trainingstation/logging/model/LogModel.java`)
+  - **global** — 提供 logging 相关工具方法
+    - `method() [推断]`执行LogModel操作
+- **AdminLogServiceImpl.java** (`ts-logging/src/main/java/com/megvii/trainingstation/logging/service/impl/AdminLogServiceImpl.java`)
+  - **global** — 提供 service 相关工具方法
+    - `method() [推断]`执行method操作
+    - `queryAll() [推断]`查询all数据
+    - `queryAllByUser() [推断]`查询allByUser数据
+    - `save() [推断]`执行save操作
+    - `findByErrDetail() [推断]`查找byErrDetail记录
+    - `download() [推断]`执行文件读写/复制/移动/删除/上传/下载
+    - `delAllByError() [推断]`执行delAllByError操作
+    - `delAllByInfo() [推断]`执行delAllByInfo操作
+    - `excludesValue() [推断]`执行excludesValue操作
+
+### ts-auth
+- **H.java** (`ts-auth/src/main/java/com/megvii/trainingstation/auth/H.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `checkx() [推断]`执行参数/状态/格式校验 — `public static void checkx() {`
+    - `check() [推断]`执行参数/状态/格式校验 — `public static boolean check() {`
+
+### ts-example
+- **ExampleController.java** (`ts-example/src/main/java/com/megvii/trainingstation/example/controller/ExampleController.java`)
+  - **global** — 提供 example 相关工具方法
+    - `method() [推断]`执行内部方法
+    - `getConfiguration() [推断]`获取configuration值
+
+### ts-test
+- **AutoTest.java** (`ts-test/src/main/java/com/megvii/trainingstation/test/AutoTest.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `main() [推断]`程序主入口
+- **DynamicDataDeserializer.java** (`ts-test/src/main/java/com/megvii/trainingstation/test/DynamicDataDeserializer.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `deserialize() [推断]`执行deserialize操作
+- **KSResult.java** (`ts-test/src/main/java/com/megvii/trainingstation/test/KSResult.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `method() [推断]`执行restResult操作
+    - `getCode() [推断]`获取状态码
+    - `setCode() [推断]`设置状态码
+    - `isError() [推断]`判断Error状态
+    - `isSuccess() [推断]`判断Success状态
+    - `getDataAsBoolean() [推断]`获取dataAsBoolean状态
+- **KpsVisualMain.java** (`ts-test/src/main/java/com/megvii/trainingstation/test/KpsVisualMain.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `main() [推断]`程序主入口
+- **SensitiveWordUtil.java** (`ts-test/src/main/java/com/megvii/trainingstation/test/SensitiveWordUtil.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `init() [推断]`初始化组件状态
+    - `contains() [推断]`执行contains操作
+    - `method() [推断]`执行method操作
+    - `replaceSensitiveWord() [推断]`替换敏感词内容
+    - `sensitiveHelper() [推断]`执行sensitiveHelper操作
+- **SocketClient.java** (`ts-test/src/main/java/com/megvii/trainingstation/test/SocketClient.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `main() [推断]`程序主入口
+
+### ts-tools
+- **ApeFileUtils.java** (`ts-tools/src/main/java/com/megvii/trainingstation/tools/ApeFileUtils.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `copyUnstableFile() [推断]`复制unstableFile
+    - `extractVariableValue() [推断]`提取variableValue
+    - `extractValueValue() [推断]`提取valueValue
+    - `method() [推断]`执行method操作
+    - `main() [推断]`程序主入口
+- **HikiCameraUtils.java** (`ts-tools/src/main/java/com/megvii/trainingstation/tools/HikiCameraUtils.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `enCodePecmd() [推断]`执行enCodePecmd操作
+    - `parseHikiResponseXml() [推断]`解析hikiResponseXml
+    - `parseXml() [推断]`解析xml
+    - `openCameraAudio() [推断]`开启cameraAudio
+    - `initCameraVideoConfig() [推断]`初始化cameraVideoConfig
+    - `initCameraAudioConfig() [推断]`初始化cameraAudioConfig
+- **HttpDeleteWithBodyUtil.java** (`ts-tools/src/main/java/com/megvii/trainingstation/tools/HttpDeleteWithBodyUtil.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `method() [推断]`执行HttpDeleteWithBodyUtil操作
+- **IpUtils.java** (`ts-tools/src/main/java/com/megvii/trainingstation/tools/IpUtils.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `isValidIPAddress() [推断]`判断ValidIPAddress状态
+    - `check() [推断]`执行参数/状态/格式校验 — `public static boolean check(String ipAddress) {`
+- **Map2BeanUtils.java** (`ts-tools/src/main/java/com/megvii/trainingstation/tools/Map2BeanUtils.java`)
+  - **global** — 提供 trainingstation 相关工具方法
+    - `map2Bean() [推断]`执行map2Bean操作
+
