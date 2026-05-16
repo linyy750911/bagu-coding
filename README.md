@@ -15,7 +15,7 @@
 >
 > 一份 8000 字思维链死机现场 vs 3.2 秒完成的对照实验 → [ARTICLE.md](./ARTICLE.md)
 
-[English](#english-abstract) | [快速上手](#最速上手3-分钟) | [实验数据](#实验数据) | [CLI 使用](#cli-使用) | [贡献](CONTRIBUTING.md)
+[English](#english-abstract) | [快速上手](#最速上手3-分钟) | [实战案例](#实战案例) | [实验数据](#实验数据) | [CLI 使用](#cli-使用) | [贡献](CONTRIBUTING.md)
 
 ---
 
@@ -123,6 +123,7 @@ codebagu check ./src --strict
 | `examples/AGENTS_example.md` | **项目级规范示例**，新项目启动时改改直接用 |
 | `EXPERIMENT_REPORT.md` | **对比实验报告 v1**，滑动窗口限流器实测 |
 | `docs/EXPERIMENT_REPORT_v2.md` | **对比实验报告 v2**，3 模块 A/B 对照 + 监控数据 |
+| `case-studies/smart-sports-2026/` | **实战案例**：智慧体育训练站 PR1 并发改造（脱敏） |
 
 ---
 
@@ -159,11 +160,33 @@ codebagu check ./src --strict
 | [跳绳检测算法](examples/golden_template_rope_skip.md) | 智慧体育项目 | ✅ 现场 ±0 精确命中 |
 | [课件开发模板](examples/COURSE_TEMPLATE.py) | 智慧体育项目 | ✅ 生产环境运行 |
 | [滑动窗口限流器](EXPERIMENT_REPORT.md) | 对比实验 | ✅ 代码审查效率提升 4-6 倍 |
+| [智慧体育 PR1 并发改造](case-studies/smart-sports-2026/PR1_REPORT.md) | 生产项目 | ✅ 800米联调通过，后台零报错 |
 | [配置热加载器](examples/modules/config_hot_reload.py) | 监控测试 | ✅ codebagu check 0 违规 |
 | [健康检查器](examples/modules/health_checker.py) | 监控测试 | ✅ codebagu check 0 违规 |
 | [体测数据上报](examples/modules/student_data_reporter.py) | 监控测试 | ✅ codebagu check 0 违规 |
 
 **欢迎投稿你的黄金模板！** PR 请附"修改前改几遍 → 用八股后改几遍"的对比。
+
+---
+
+## 实战案例
+
+### 智慧体育训练站 PR1 并发改造（2026-05）
+
+一个真实的生产项目改造：从单任务模式升级到**同一面板机并发执行多个独立训练任务**。
+
+| 维度 | 改造前 | 改造后 |
+|------|--------|--------|
+| 任务模式 | 单任务全局状态 | `Map<taskId, TaskState>` 隔离 |
+| 后端锁 | 按 `sourceIp` 3秒锁 | 按 `sourceIp_taskId` 细粒度锁 |
+| 兼容策略 | 一刀切替换 | `concurrentMode` 开关，随时回滚 |
+| 验证结果 | — | 800米联调 2分48秒，后台零报错 |
+
+**相关文档（已脱敏）**：
+- [PR1_REPORT.md](case-studies/smart-sports-2026/PR1_REPORT.md) — 完整改造报告 + 验证数据
+- [AGENTS.md](case-studies/smart-sports-2026/AGENTS.md) — 项目上下文（脱敏版）
+- [PROJECT_MAP.md](case-studies/smart-sports-2026/PROJECT_MAP.md) — 精简项目地图（脱敏版）
+- [BAGU_METHODOLOGY.md](docs/BAGU_METHODOLOGY.md) — 八股化开盒方法论
 
 ---
 
