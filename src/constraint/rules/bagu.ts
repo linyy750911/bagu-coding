@@ -4,16 +4,13 @@
  * 拓扑图:
  *   输入: RuleContext（source, filePath, language）
  *   输出: RuleViolation[]（破题/承题/起讲/入手/股标记缺失）
- *   数据流向:
- *     source + language → 检测函数存在 → 检查破题/承题/起讲/入手 → 检查股标记 → 检查后股/束股内容
- *   修改风险点:
- *     ⚠️ 第15行: functionPattern 可能漏检某些语言的特殊函数定义
  *   最近修改:
  *     2026-05-15: 支持多语言行注释（# / // / --）
+ *     2026-05-15: 支持置信度前缀 [人工]/[推断]/[模板]
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
-// 破题：检测函数级八股注释的完整性；不做代码逻辑正确性检查。
+// 破题：检测函数级八股注释的完整性（含置信度前缀）；不做代码逻辑正确性检查。
 // 承题：依赖 LanguageProfile 的 lineComment 和 functionPattern。前置条件: source 非空。
 // [起讲] 八股规范的核心 enforcement——没有完整八股框架的函数必须被拦截
 // 入手：N/A
@@ -24,7 +21,7 @@
 
 // ==== 中股 ====
 // 算：functionPattern.test(source) → 判断是否需要检查
-// 算：正则匹配破题/承题/起讲/入手/股标记
+// 算：正则匹配破题（含可选置信度前缀）/承题/起讲/入手/股标记
 // 算：提取后股/束股内容 → 检查正路径/降级路径/给出/留下
 
 // ==== 后股 ====
@@ -63,7 +60,7 @@ export class BaguParagraphsRule implements CodeBaguRule {
     if (!hasFunction) return violations;
 
     const lc = escapeRegex(profile.lineComment);
-    const potiRegex = new RegExp(`${lc}\\s*破题[：:]\\s*(.+)`);
+    const potiRegex = new RegExp(`${lc}\\s*(?:\\[(人工|推断|模板)\\]\\s+)?破题[：:]\\s*(.+)`);
     const chengTiRegex = new RegExp(`${lc}\\s*承题[：:]`);
     const qiJiangRegex = new RegExp(`${lc}\\s*\\[起讲\\]`);
     const ruShouRegex = new RegExp(`${lc}\\s*入手[：:]`);
@@ -77,7 +74,7 @@ export class BaguParagraphsRule implements CodeBaguRule {
       });
     } else {
       const potiLine = this.lineOf(source, potiMatch.index ?? 0);
-      const potiContent = potiMatch[1].trim();
+      const potiContent = potiMatch[2].trim();
       const parts = potiContent.split(/[；;]/);
       if (parts.length < 2) {
         violations.push({

@@ -38,7 +38,28 @@
 import { CodeBaguConfig, RuleSeverity } from '../config/types';
 import { CodeBaguRule, RuleContext, EngineResult, RuleViolation, ViolationSeverity } from './types';
 
+// 破题：将配置中的 severity 字符串映射为 ViolationSeverity；不做配置校验。
+// 承题：依赖 RuleSeverity、ViolationSeverity 类型定义。前置条件: severity 为有效字符串或 undefined。
+// [起讲] required / undefined → error；其他 → warning
+// 入手：N/A
 function toSeverity(severity: RuleSeverity | undefined): ViolationSeverity {
+  // ==== 起股 ====
+  // 取：severity（RuleSeverity | undefined）
+  // 验：N/A
+
+  // ==== 中股 ====
+  // 算：severity === 'required' || undefined → 'error'
+  // 算：其他 → 'warning'
+
+  // ==== 后股 ====
+  // ✓ 正路径：required → error
+  // ✓ 正路径：warn → warning
+  // ✗ 降级路径：undefined → error（默认最严格）
+
+  // ==== 束股 ====
+  // 给出：ViolationSeverity
+  // 留下：N/A
+
   if (severity === 'required' || severity === undefined) return 'error';
   return 'warning';
 }
@@ -56,7 +77,30 @@ export class ConstraintEngine {
     this.rules = rules;
   }
 
+  // 破题：对单个文件执行全量规则检查，按 severity 分级汇总结果；不做增量或缓存。
+  // 承题：依赖 this.rules、this.config、toSeverity。前置条件: context 包含有效 source 和 language。
+  // [起讲] 遍历规则 → severity='off' 则跳过 → 调用 rule.check → 收集违规 → 分级映射 → 判定 passed
+  // 入手：N/A
   evaluate(context: RuleContext): EngineResult {
+    // ==== 起股 ====
+    // 取：RuleContext（filePath, source, language）
+    // 验：this.rules 和 this.config 已初始化
+
+    // ==== 中股 ====
+    // 算：遍历规则列表 → severity='off' 跳过
+    // 算：rule.check(context) → 收集 violations
+    // 算：toSeverity 映射 → 按 error/warning 分级
+    // 转：allViolations → EngineResult
+
+    // ==== 后股 ====
+    // ✓ 正路径：无 error 级违规 → passed = true
+    // ✗ 降级路径：存在 error 级违规 → passed = false
+    // ✗ 降级路径：severity='off' → 规则静默跳过
+
+    // ==== 束股 ====
+    // 给出：EngineResult（passed, violations, filePath）
+    // 留下：无副作用（纯计算，不修改外部状态）
+
     const allViolations: RuleViolation[] = [];
 
     for (const rule of this.rules) {

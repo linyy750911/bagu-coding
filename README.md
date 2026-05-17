@@ -100,8 +100,13 @@
 > 已完成：`src/constraint/rules/duality.ts` ✅
 > 已完成：`src/constraint/rules/format.ts` ✅
 > 已完成：`src/constraint/rules/empty-bagu.ts` ✅
-> 进行中：`src/cli/check.ts` / `src/cli/init.ts` / `src/agent/context.ts` / `src/agent/history.ts` / `src/agent/metrics.ts`
-> 目标：全部核心代码自举完成。
+> 已完成：`src/cli/check.ts` ✅
+> 已完成：`src/cli/init.ts` ✅
+> 已完成：`src/agent/context.ts` ✅
+> 已完成：`src/agent/history.ts` ✅
+> 已完成：`src/agent/metrics.ts` ✅
+> 已完成：`src/config/languages.ts` ✅
+> **目标达成：全部 27 个核心源码文件八股自举完成，strict 校验 0 违规。**
 
 ---
 

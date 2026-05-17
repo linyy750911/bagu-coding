@@ -81,7 +81,28 @@ const DEFAULT_CONFIG: CodeBaguConfig = {
   ci: { strict: true, format: 'text' },
 };
 
+// 破题：从指定目录向上遍历查找 .codebagu.yml；不做配置内容校验。
+// 承题：依赖 fs.existsSync、path.join/path.dirname、loadConfigFromCwd。前置条件: cwd 为有效路径或省略。
+// [起讲] 向上遍历目录树直到根目录，找到即加载；找不到则返回 DEFAULT_CONFIG
+// 入手：N/A
 async function getConfig(cwd?: string): Promise<CodeBaguConfig> {
+  // ==== 起股 ====
+  // 取：cwd（可选，默认 process.cwd()）
+  // 验：cwd 为字符串或 undefined
+
+  // ==== 中股 ====
+  // 算：while 循环向上遍历目录树
+  // 算：existsSync 检查 .codebagu.yml 存在性
+  // 算：找到则 loadConfigFromCwd → 返回配置
+
+  // ==== 后股 ====
+  // ✓ 正路径：目录树中存在 .codebagu.yml → 加载并返回
+  // ✗ 降级路径：遍历到根目录未找到 → 返回 DEFAULT_CONFIG
+
+  // ==== 束股 ====
+  // 给出：CodeBaguConfig
+  // 留下：N/A
+
   let targetDir = cwd ? resolve(cwd) : process.cwd();
   while (true) {
     if (existsSync(join(targetDir, '.codebagu.yml'))) {
@@ -94,7 +115,27 @@ async function getConfig(cwd?: string): Promise<CodeBaguConfig> {
   return DEFAULT_CONFIG;
 }
 
+// 破题：chat 默认命令的入口包装器，加载配置后启动对话；不做命令行解析。
+// 承题：依赖 getConfig、startChat。前置条件: Node.js 环境、可选 .env 已加载。
+// [起讲] 捕获 startChat 异常，统一输出错误信息并非零退出
+// 入手：N/A
 async function defaultChat(options: { model?: string; apiKey?: string; skill?: string; workingDir?: string }) {
+  // ==== 起股 ====
+  // 取：options（model、apiKey、skill、workingDir）
+  // 验：N/A
+
+  // ==== 中股 ====
+  // 算：await getConfig() → 加载配置
+  // 算：await startChat(config, options) → 启动对话循环
+
+  // ==== 后股 ====
+  // ✓ 正路径：配置加载成功 → 对话正常启动 → 用户交互
+  // ✗ 降级路径：配置加载失败或 startChat 异常 → 打印错误 → process.exit(1)
+
+  // ==== 束股 ====
+  // 给出：无（进程退出或对话循环阻塞）
+  // 留下：N/A
+
   try {
     const config = await getConfig();
     await startChat(config, options);

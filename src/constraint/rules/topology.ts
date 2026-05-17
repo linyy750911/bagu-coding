@@ -4,18 +4,15 @@
  * 拓扑图:
  *   输入: RuleContext（source, filePath, language）
  *   输出: RuleViolation[]（拓扑图头缺失或字段不全）
- *   数据流向:
- *     source + language → getProfile → topologyStrategy → extractHeader → 检查必填字段
- *   修改风险点:
- *     ⚠️ 第14行: extractHeader 只取第一个匹配的文档头，多个文档头时可能漏检
  *   最近修改:
  *     2026-05-15: 支持多语言文档头策略（docstring/docblock/prefixLines）
+ *     2026-05-15: 精简必填字段为 3 项（输入/输出/最近修改）
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
-// 破题：检测文件顶部是否包含完整的拓扑图头（5 个必填字段）；不做内容语义分析。
+// 破题：检测文件顶部是否包含完整的拓扑图头（3 个必填字段）；不做内容语义分析。
 // 承题：依赖 LanguageProfile 的 topologyStrategy。前置条件: language 已识别。
-// [起讲] 根据语言类型选择文档头提取策略，统一检查输入/输出/数据流向/风险点/修改记录
+// [起讲] 根据语言类型选择文档头提取策略，统一检查输入/输出/修改记录
 // 入手：N/A
 
 // ==== 起股 ====
@@ -25,7 +22,7 @@
 // ==== 中股 ====
 // 算：getProfile(language) → 获取 topologyStrategy
 // 算：extractHeader(source, strategy) → 提取文档头内容
-// 算：检查 5 个必填字段是否齐全
+// 算：检查 3 个必填字段是否齐全
 
 // ==== 后股 ====
 // ✓ 正路径：文档头完整 → 无违规
@@ -39,7 +36,7 @@
 import { CodeBaguRule, RuleContext, RuleViolation } from '../types';
 import { getProfile } from '../../config/languages';
 
-const REQUIRED_FIELDS = ['输入', '输出', '数据流向', '修改风险点', '最近修改'];
+const REQUIRED_FIELDS = ['输入', '输出', '最近修改'];
 
 export class TopoHeaderRule implements CodeBaguRule {
   id = 'tuopu_header';
